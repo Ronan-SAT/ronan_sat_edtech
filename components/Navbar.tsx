@@ -10,7 +10,7 @@ import Image from "next/image";
 import logo from "@/assets/sat-png-4.png";
 import { useSession, signOut } from "next-auth/react";   // signOut để signOut -> Hủy session đăng nhập, và điều hướng về trạng thái chưa đăng nhập
 import Link from "next/link";
-import { LogOut, Settings, BarChart2 } from "lucide-react";
+import { LogOut, Settings, BarChart2, Trophy  } from "lucide-react";
 import { usePathname } from "next/navigation";          // Công cụ để đọc url hiện tại -> Biết user ở trang nào -> Tô đậm ô đó  
 
 export default function Navbar() {
@@ -65,6 +65,14 @@ export default function Navbar() {
                         >
                             <Settings className="w-4 h-4" />
                             Settings
+                        </Link>
+
+                        <Link 
+                            href="/hall-of-fame" 
+                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/hall-of-fame" ? "text-blue-600" : "text-slate-600"}`}
+                        >   
+                           <Trophy className="w-4 h-4" />
+                            Hall of Fame
                         </Link>
 
                         <div className="h-6 w-px bg-slate-200 mx-2" />

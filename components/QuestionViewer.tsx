@@ -54,6 +54,21 @@ export default function QuestionViewer({
         ${question.passage ? "w-1/2 border-r border-slate-300" : "hidden"} 
         h-full overflow-y-auto p-8 lg:p-12
       `}>
+
+                    {question.imageUrl && (
+                        <div className="flex justify-center w-full bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <img 
+                                src={question.imageUrl} 
+                                alt="Question Reference" 
+                                className="max-w-full max-h-[350px] object-contain rounded shadow-sm"
+                            />
+                        </div>
+                    )}
+
+
+
+
+
                 {question.passage && (
                     <div className="bg-white p-8 border border-slate-200 text-lg leading-relaxed font-serif text-slate-800 rounded-lg selection:bg-yellow-200 selection:text-black">
                         {/* trong văn bản thường dùng Enter để xuống dòng, trình duyệt k hiểu => Thay đó là <br /> (thẻ xuống dòng HTML) */}
@@ -86,6 +101,8 @@ export default function QuestionViewer({
                         Mark for Review
                     </button>
                 </div>
+
+    
 
                 <div className="prose max-w-none text-xl text-slate-900 mb-8 font-medium leading-relaxed">
                     {question.questionText}

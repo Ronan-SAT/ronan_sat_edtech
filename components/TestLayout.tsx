@@ -11,6 +11,7 @@ interface TestHeaderProps {
     isTimerHidden: boolean;
     setIsTimerHidden: (hide: boolean) => void;
     isLastModule?: boolean;
+    showCalculator?: boolean; 
 }
 
 export function TestHeader({
@@ -20,7 +21,8 @@ export function TestHeader({
     isTimerHidden,
     setIsTimerHidden,
     onToggleCalculator,
-    isLastModule
+    isLastModule,
+    showCalculator = true
 }: TestHeaderProps & { onToggleCalculator?: () => void }) {
 
     const formatTime = (seconds: number) => {
@@ -62,6 +64,7 @@ export function TestHeader({
             </div>
 
             <div className="flex-1 flex justify-end items-center gap-4">
+              {showCalculator && (
                 <Button
                     onClick={onToggleCalculator}
                     icon={<Calculator className="w-4 h-4" />}
@@ -70,6 +73,7 @@ export function TestHeader({
                 >
                     <span className="hidden sm:inline">Calculator</span>
                 </Button>
+              )}
 
                 <Popconfirm 
                     title={isLastModule ? "Submit Entire Test?" : "Finish This Module?"}

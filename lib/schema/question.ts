@@ -16,6 +16,8 @@ export const QuestionValidationSchema = z.object({            // Tạo bộ lu�
     explanation: z.string().min(1, "Explanation is required"),
     difficulty: z.enum(["easy", "medium", "hard"]).default("medium"),   // Ép phải là 1 trong 3 chữ này, enum là liệt kê, mặc định là medium
     points: z.number().min(0).default(10),     // Trọng số của câu thấp nhất là 0 và mặc định là 10
+    imageUrl: z.string().optional(),
+
 });
 
 

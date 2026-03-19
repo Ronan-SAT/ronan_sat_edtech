@@ -142,28 +142,45 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
                 };
             });
 
-            let totalPoints = 0;       // Tính tổng điểm và đã đạt được bao nhiêu điiểm
-            let earnedPoints = 0;
 
+
+
+            // 1. Tạo 2 giỏ đựng điểm cho 2 phần thi riêng biệt (khởi điểm là 0)
+            let earnedReadingPoints = 0;
+            let earnedMathPoints = 0;
+
+            // 2. Đi qua từng câu hỏi trong toàn bộ đề thi
             questions.forEach(q => {
-                const points = q.points || 0;    
-                totalPoints += points;                    // Đi qua từng câu hỏi xem câu này đáng giá bnh điểm để cộng vào total
-
                 const userAns = answers[q._id] || "";
+                
+                // Nếu học sinh chọn đúng đáp án
                 if (userAns === q.correctAnswer) {
-                    earnedPoints += points;                   // Lấy ans của user, check với đáp án nếu đúng mới cộng vào điểm earned
+                    const points = q.points || 0; // Lấy trọng số của câu đó (mặc định là 0 nếu admin quên điền)
+                    
+                    // Phân loại xem câu đúng này thuộc phần nào để cộng điểm vào giỏ phần đó
+                    if (q.section === "Reading and Writing") {
+                        earnedReadingPoints += points;
+                    } else if (q.section === "Math") {
+                        earnedMathPoints += points;
+                    }
                 }
             });
 
-            const score = totalPoints > 0 ? Math.floor((earnedPoints / totalPoints) * 1600) : 0;    // FIX cách tính điểm sai
-            //Nếu bài thi có điểm thì tính điểm = ratio đúng/tổng số câu * 1600
-            // Math.floor làm tròn số nguyên từ 1500.8  thành 1500
+            // 3. Tính điểm từng phần theo công thức SAT: 200 điểm sàn + tổng trọng số câu đúng
+            // Dùng Math.min(..., 800) để đảm bảo nếu admin cài đặt trọng số quá cao, điểm tối đa cũng không bao giờ vượt quá 800
+            const readingScore = Math.min(200 + earnedReadingPoints, 800);
+            const mathScore = Math.min(200 + earnedMathPoints, 800);
+
+            // 4. Điểm tổng là sự kết hợp của 2 phần
+            const totalScore = readingScore + mathScore;
+
+
 
             const res = await api.post(API_PATHS.RESULTS, {    // Nộp bảng điểm và chi tiết bài làm cho BE
                 testId,                              // Mã bài thi
                 answers: formattedAnswers,           // Gửi array chứa các thông tin của từng câu ( id câu, chọn gì, đúng k )
-                score,                               // kết quả tính được
-                sectionBreakdown: { readingAndWriting: score / 2, math: score / 2 }    // FIXX: Tính được score là 1400 thì nó chia đổi cho math và verbal => Cách tính sai
+                score: totalScore,                               // kết quả tính được
+                sectionBreakdown: { readingAndWriting: readingScore, math: mathScore }    // FIXX: Tính được score là 1400 thì nó chia đổi cho math và verbal => Cách tính sai
             });
 
             if (res.status === 200 || res.status === 201) {
@@ -201,6 +218,7 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
                 isTimerHidden={isTimerHidden}           // Đây là component con k dùng logic để bật tắt timer mà chỉ nhạn tín hiệu từ component cha là TestLayout
                 setIsTimerHidden={setIsTimerHidden}
                 onToggleCalculator={() => setIsCalculatorOpen(!isCalculatorOpen)}       // Lật ngược lại bool bật tắt Calc
+                showCalculator={currentStage.section === "Math"}
             />
 
             <DesmosCalculator

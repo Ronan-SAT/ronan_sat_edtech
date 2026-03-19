@@ -16,7 +16,8 @@ import { API_PATHS } from "@/lib/apiPaths";                           // đườ
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
-  const [tests, setTests] = useState([]);                // data các bài test được display
+  const [tests, setTests] = useState<any[]>([]);                // data các bài test được display
+
   const [loading, setLoading] = useState(true);          // loading animation
   const [userStats, setUserStats] = useState({ 
     testsTaken: 0,                                       // thông tin stats về số tests và điểm cao nhất
@@ -28,6 +29,30 @@ export default function Dashboard() {
   const [totalPages, setTotalPages] = useState(1);           // biến lưu tổng số trang
   const limit = 6;
 
+  // 1. Biến nhớ lưu mốc thời gian đang được chọn (Mặc định là xem Tất cả)
+  const [selectedPeriod, setSelectedPeriod] = useState("All");
+
+  // 2. Tự động quét kho đề thi, lấy 2 chữ đầu tiên của tên đề làm mốc thời gian (loại bỏ trùng lặp)
+  const uniquePeriods = ["All", ...Array.from(new Set(tests.map(t => {
+      const parts = t.title.split(' '); // Tách tên đề thành các từ
+      if (parts.length >= 2) return `${parts[0]} ${parts[1]}`; // Lấy từ số 1 và số 2 (VD: March 2026)
+      return "Other";
+  })))];
+
+// 3. Mảng dữ liệu mới: Phân loại theo 3 trường hợp rõ ràng
+  const filteredTests = tests.filter(t => {
+    // Trường hợp 1: Nếu người dùng đang chọn xem "All Tests" -> Giữ lại bài này
+    if (selectedPeriod === "All") return true;
+    
+    // Trường hợp 2: Nếu người dùng bấm vào nút "Other"
+    // Lệnh split(' ') sẽ chặt tên bài test thành các từ. Nếu số từ nhỏ hơn 2 thì giữ lại.
+    if (selectedPeriod === "Other") return t.title.split(' ').length < 2;
+    
+    // Trường hợp 3: Người dùng bấm vào các mốc thời gian bình thường (VD: "March 2026")
+    // Giữ lại các bài test có tên bắt đầu bằng mốc thời gian đó
+    return t.title.startsWith(selectedPeriod);
+  });
+
   useEffect(() => {
     if (session) {                    // Khi đã login
       const fetchUserStats = async () => {     // Hàm đi lấy data user
@@ -37,7 +62,6 @@ export default function Dashboard() {
           if (statsData.results) { 
             setUserResults(statsData.results);               // Nếu tồn tại dữ liệu => Lưu vào biến nhớ setUserResult để Heatmap có data vẽ lên biểu đồ 
           }
-
 
           const userRes = await api.get('/api/user/stats');   // Lấy thêm thông tin từ đường dẫn chứa stats của user
           const userData = userRes.data;                      // Chỉ lưu data cần thiết
@@ -77,7 +101,7 @@ export default function Dashboard() {
 
         const res = await api.get(`${API_PATHS.TESTS}?page=${page}&limit=${limit}&sortBy=${sortBy}&sortOrder=${sortOrder}`);  // Lấy data test theo các điều kiện: Trang số mấy, mỗi trang mấy bài, tiêu chí sort
         setTests(res.data.tests || []);                           // Lấy data về các bài test, lưu vào biến setTests để in ra màn hình, k có data thì lưu biến rỗng tránh sập
-        if (res.data.pagination) {                            // Logic xử lý có cần thêm trang không được backend xử lý, nếu cần thêm trang thì sẽ tồn tại res.data.pagination
+        if (res.data.pagination) {                                // Logic xử lý có cần thêm trang không được backend xử lý, nếu cần thêm trang thì sẽ tồn tại res.data.pagination
           setTotalPages(res.data.pagination.totalPages);      // Kiểm tra máy chủ có gửi thông tin về số trang không, pagination là phân ra nhiều trang
                                                               // Có phân trang thì lưu vào biến nhớ để vẽ đúng số lượng nút bấm cho các trang (ví dụ có 7 test  nhưng 1 trang chỉ dược 6 test => Cần 2 trang)
         }
@@ -137,7 +161,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
 
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* User Stats Panel */}
         <section className="mb-10">
@@ -185,68 +208,105 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Test Library */}
+        {/* Test Library - ĐÃ ĐƯỢC CHIA CỘT */}
         <section>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-transparent">
-            <div className="flex items-center gap-3">
-              <h2 className="text-2xl font-bold text-slate-900">Practice Test Library</h2>
-              {loading && <span className="text-sm text-slate-500 animate-pulse">Syncing...</span>}
+          <div className="flex flex-col md:flex-row gap-8">
+            
+            {/* CỘT TRÁI: Thanh Sidebar điều hướng theo thời gian */}
+            <div className="w-full md:w-1/4 flex-shrink-0">
+              {/* sticky top-24 giúp thanh này dính trên màn hình khi cuộn chuột */}
+              <div className="bg-white rounded-xl border border-slate-200 p-5 sticky top-24">
+                <h2 className="text-lg font-bold text-slate-800 mb-4 pb-3 border-b border-slate-100">
+                  Filter by Date
+                </h2>
+                <div className="flex flex-col gap-2">
+                  {uniquePeriods.map((period, index) => (
+                    <button
+                      key={index}
+                      onClick={() => { 
+                        setSelectedPeriod(period); 
+                        setPage(1); // Cực kì quan trọng: Reset về trang 1 khi đổi bộ lọc
+                      }}
+                      className={`text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                        selectedPeriod === period 
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 shadow-sm" // Nổi bật mục đang chọn
+                          : "text-slate-600 hover:bg-slate-50 border border-transparent"
+                      }`}
+                    >
+                      {period === "All" ? "All Tests" : period}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label htmlFor="sort-tests" className="text-sm font-medium text-slate-600">Sort by:</label>
-              <select
-                id="sort-tests"
-                value={sortOption}    // Hiển thị ra màn hình lựa chọn Sort hiện tại
-                onChange={(e) => { setSortOption(e.target.value); setPage(1); }}    // e.target.value = value mà option dưới chọn (newest/oldest/...) và thay đổi giá trị biến nhớ option Sort và cập nhật bắt user về lại trang 1
-                className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="title_asc">Title (A-Z)</option>
-                <option value="title_desc">Title (Z-A)</option>
-              </select>
-            </div>
-          </div>
+            {/* CỘT PHẢI: Lưới danh sách đề thi */}
+            <div className="w-full md:w-3/4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-transparent">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-slate-900">Practice Test Library</h2>
+                  {loading && <span className="text-sm text-slate-500 animate-pulse">Syncing...</span>}
+                </div>
 
-          {loading ? (
-            <Loading />
-          ) : tests.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-xl border border-slate-200 border-dashed">
-              <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900">No tests available yet</h3>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tests.map((test: any) => (
-                  <TestCard key={test._id} test={test} />
-                ))}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort-tests" className="text-sm font-medium text-slate-600">Sort by:</label>
+                  <select
+                    id="sort-tests"
+                    value={sortOption}    // Hiển thị ra màn hình lựa chọn Sort hiện tại
+                    onChange={(e) => { setSortOption(e.target.value); setPage(1); }}    // Cập nhật Sort và về trang 1
+                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
+                  >
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="title_asc">Title (A-Z)</option>
+                    <option value="title_desc">Title (Z-A)</option>
+                  </select>
+                </div>
               </div>
 
-              {!loading && totalPages > 1 && (      // nếu đang k load và số trang phải > 1 (vì = 1 thì k cần thanh số trang => Hệ thống tự xóa đi)
-                <div className="flex justify-center items-center mt-8 gap-4">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}     // Khi bấm nút  Previous thì set số trang - 1 nhưng k được về trang 0 => hàm Math.max để đảm bảo trang bé nhất là 1
-                    disabled={page === 1}                                // page đang ở trang 1 thì k cho ấn lùi nữa 
-                    className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-sm font-medium text-slate-600">
-                    Page {page} of {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}  // Đảm bảo không vượt quá tổng số trang
-                    disabled={page === totalPages}                             // Đến trang cuối thì k cho Next nữa
-                    className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
+              {loading ? (
+                <Loading />
+              ) : filteredTests.length === 0 ? (
+                <div className="text-center py-16 bg-white rounded-xl border border-slate-200 border-dashed">
+                  <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-900">No tests found for this period</h3>
                 </div>
+              ) : (
+                <>
+                  {/* Điều chỉnh Grid thành 2 cột to để vừa vặn với kích thước mới (vì bên trái đã chiếm 1 khoảng) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {/* BẮT BUỘC PHẢI DÙNG filteredTests Ở ĐÂY */}
+                    {filteredTests.map((test: any) => (
+                      <TestCard key={test._id} test={test} />
+                    ))}
+                  </div>
+
+                  {!loading && totalPages > 1 && (      // nếu đang k load và số trang phải > 1
+                    <div className="flex justify-center items-center mt-8 gap-4">
+                      <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}     // Lùi trang
+                        disabled={page === 1}                                // Chặn lùi nếu ở trang 1 
+                        className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-sm font-medium text-slate-600">
+                        Page {page} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}  // Tiến trang
+                        disabled={page === totalPages}                             // Chặn tiến nếu ở trang cuối
+                        className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
+            </div>
+
+          </div>
         </section>
       </main>
     </div>
