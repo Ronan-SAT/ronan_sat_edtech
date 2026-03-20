@@ -10,7 +10,7 @@ import Image from "next/image";
 import logo from "@/assets/sat-png-4.png";
 import { useSession, signOut } from "next-auth/react";   // signOut để signOut -> Hủy session đăng nhập, và điều hướng về trạng thái chưa đăng nhập
 import Link from "next/link";
-import { LogOut, Settings, BarChart2, Trophy  } from "lucide-react";
+import { LogOut, Settings, BarChart2, Trophy, Target, BookOpen  } from "lucide-react";
 import { usePathname } from "next/navigation";          // Công cụ để đọc url hiện tại -> Biết user ở trang nào -> Tô đậm ô đó  
 
 export default function Navbar() {
@@ -51,6 +51,27 @@ export default function Navbar() {
                             </Link>
                         )}
 
+
+
+
+                        {/* Nút Full-length tests (Trang chủ hiện tại) */}
+                        <Link
+                            href="/"
+                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/" ? "text-blue-600" : "text-slate-600"}`}
+                        >
+                            <BookOpen className="w-4 h-4" /> {/* Đừng quên import BookOpen từ lucide-react */}
+                            Full-length tests
+                        </Link>
+
+                        {/* Nút Sectional tests (Trang mới) */}
+                        <Link
+                            href="/sectional"
+                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/sectional" ? "text-blue-600" : "text-slate-600"}`}
+                        >
+                            <Target className="w-4 h-4" /> {/* Đừng quên import Target từ lucide-react */}
+                            Sectional tests
+                        </Link>
+
                         <Link
                             href="/review"                                                                             // Liên tục check trang hiện tại có phải review không để hiện màu đậm hơn => Các trang khác tương tự
                             className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/review" ? "text-blue-600" : "text-slate-600"}`}
@@ -58,6 +79,18 @@ export default function Navbar() {
                             <BarChart2 className="w-4 h-4" />
                             Review Mistakes
                         </Link>
+
+
+
+                         <Link 
+                            href="/hall-of-fame" 
+                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/hall-of-fame" ? "text-blue-600" : "text-slate-600"}`}
+                        >   
+                           <Trophy className="w-4 h-4" />
+                            Hall of Fame
+                        </Link>
+
+                        
 
                         <Link
                             href="/settings"
@@ -67,13 +100,7 @@ export default function Navbar() {
                             Settings
                         </Link>
 
-                        <Link 
-                            href="/hall-of-fame" 
-                            className={`flex items-center gap-1 text-sm font-medium hover:text-blue-600 ${pathname === "/hall-of-fame" ? "text-blue-600" : "text-slate-600"}`}
-                        >   
-                           <Trophy className="w-4 h-4" />
-                            Hall of Fame
-                        </Link>
+                       
 
                         <div className="h-6 w-px bg-slate-200 mx-2" />
 

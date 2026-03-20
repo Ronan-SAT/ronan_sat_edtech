@@ -1,54 +1,93 @@
-// Lấy thông tin 1 bài kiểm tra, vẽ ra 1 tấm thẻ, đáy thẻ có 1 nút bấm để chuyển sang trang làm bài thi
-
-import Link from "next/link";    // Công  cụ chuyển trang k làm web bị giật đen màn hình khi chuyển
+import Link from "next/link";
 import { Clock, BookOpen, GraduationCap } from "lucide-react";
 
-interface Test {   // Khuôn chứa các thông tin của bài Test
-    _id: string;    // id bài test
-    title: string;       // tên
-    timeLimit: number;   // thời gian
-    difficulty: string;  // độ khó bài test     ***************** bài nào cũng có độ khó y như nhau maybe nên bỏ 
-    sections: any[];     // Các phần của bài test ( Verbal and Math )
+interface Test {
+    _id: string;
+    title: string;
+    timeLimit: number;
+    difficulty: string;
+    sections: any[];
 }
 
-export default function TestCard({ test }: { test: Test }) {     // nhận vào data dạng Test ở trên, test chứa mọi thông tin về bài test
-    // Simple heuristic for total questions based on sections
-    const totalQuestions =     // Lấy tổng số câu hỏi của bài thi
+// Khai báo thêm các tham số mới cho thẻ TestCard
+interface TestCardProps {
+    test: Test;
+    isSectional?: boolean;         // Có phải đang ở trang Sectional không? (Dấu ? nghĩa là không bắt buộc)
+    subjectFilter?: string;        // "reading" hoặc "math"
+    userResults?: any[];           // Danh sách điểm để kiểm tra xem đã làm chưa
+}
 
-        test.sections?.reduce((acc, sec) => acc + sec.questionsCount, 0) || 0;
-        // test là toàn bộ bài thi, section là từng section (Verbal or Math), questionsCount là số câu hỏi của từng phần đó
-        // .reduce() là công cụ lặp qua 1 danh sách và gom tất cả thành 1 giá trị duy nhất (this case là tính tổng)
-        //   , 0) là giá trị ban đầu của acc
-        // ? -> Đề phòng lỗi k có section  => Trả về 0 ( || 0 ) thay vì undefined
+export default function TestCard({ test, isSectional = false, subjectFilter, userResults = [] }: TestCardProps) {
+    const totalQuestions = test.sections?.reduce((acc, sec) => acc + sec.questionsCount, 0) || 0;
+
+    // --- LOGIC TÌM ĐIỂM CŨ (Dành riêng cho Sectional) ---
+    // Giả định trong database `userResults`, mỗi kết quả lưu: testId, subject, module, score
+    // Bạn cần điều chỉnh tên các trường (score, module...) cho khớp với schema Result của bạn.
+    const getModuleResult = (moduleNumber: number) => {
+        return userResults.find(
+            (r) => r.testId === test._id && r.subject === subjectFilter && r.module === moduleNumber
+        );
+    };
+
+    const mod1Result = isSectional ? getModuleResult(1) : null;
+    const mod2Result = isSectional ? getModuleResult(2) : null;
+
     return (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:border-blue-200 transition-all group flex flex-col h-full">
             <div className="p-5 flex-1">
                 <div className="flex justify-between items-start mb-3">
                     <h3 className="text-xl font-bold text-slate-900 group-hover:text-blue-700">
-                        {test.title}       {/** In tên bài thi lên góc trái thẻ */}
+                        {test.title}
                     </h3>
                 </div>
 
                 <div className="space-y-2 mt-4 text-sm text-slate-600">
                     <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-slate-400" />
-                        <span>{test.timeLimit} Minutes Total</span>   {/** In thời gian */}
+                        <span>{test.timeLimit} Minutes Total</span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <GraduationCap className="w-4 h-4 text-slate-400" />  
-                        <span>{totalQuestions} Questions</span>    {/** In ra tổng có bnh câu hỏi */}
+                        <GraduationCap className="w-4 h-4 text-slate-400" />
+                        <span>{totalQuestions} Questions</span>
                     </div>
                 </div>
             </div>
 
             <div className="p-4 bg-slate-50 border-t border-slate-100 mt-auto">
-                <Link
-                    href={`/test/${test._id}`}       // Link đường dẫn tới bài test theo Id
-                    className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
-                >
-                    Start Practice
-                </Link>
+                {/* NẾU LÀ TRANG SECTIONAL -> HIỂN THỊ 2 NÚT */}
+                {isSectional ? (
+                    <div className="flex flex-col gap-2">
+                        {/* Nút Module 1 */}
+                        <Link
+                            // Truyền tham số subject và module lên URL để TestEngine đọc được
+                            href={`/test/${test._id}?subject=${subjectFilter}&module=1`}
+                            className={`block w-full text-center font-medium py-2 px-4 rounded-lg border ${
+                                mod1Result ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200" : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
+                        >
+                            {mod1Result ? `Retake Module 1 (Score: ${mod1Result.score})` : "Start Module 1"}
+                        </Link>
+
+                        {/* Nút Module 2 */}
+                        <Link
+                            href={`/test/${test._id}?subject=${subjectFilter}&module=2`}
+                            className={`block w-full text-center font-medium py-2 px-4 rounded-lg border ${
+                                mod2Result ? "bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200" : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
+                        >
+                            {mod2Result ? `Retake Module 2 (Score: ${mod2Result.score})` : "Start Module 2"}
+                        </Link>
+                    </div>
+                ) : (
+                    /* NẾU LÀ TRANG FULL-LENGTH BÌNH THƯỜNG -> HIỂN THỊ 1 NÚT NHƯ CŨ */
+                    <Link
+                        href={`/test/${test._id}`}
+                        className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
+                    >
+                        Start Practice
+                    </Link>
+                )}
             </div>
         </div>
     );
