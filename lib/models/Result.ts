@@ -24,6 +24,7 @@ export interface IResult extends Document {
         math?: number;
     };
     date: Date;
+    createdAt?: Date; // Mongoose tự động tạo ra nhờ timestamps: true
 }
 
 const AnswerSchema: Schema<IAnswer> = new Schema({
@@ -52,8 +53,20 @@ const ResultSchema: Schema<IResult> = new Schema(
         },
         date: { type: Date, default: Date.now },
     },
-    { timestamps: true }
+    { timestamps: true } // Tính năng này tự động sinh ra trường createdAt và updatedAt
 );
+
+// ==========================================
+// ĐÂY LÀ PHẦN THÊM "MỤC LỤC" (INDEX)
+// ==========================================
+
+// 1. Mục lục gộp (Compound Index) để tìm nhanh theo Ngày nộp bài giảm dần (-1) và Điểm số giảm dần (-1)
+ResultSchema.index({ createdAt: -1, score: -1 });
+
+// 2. Mục lục để tìm nhanh xem bài test này là của học sinh nào (userId)
+ResultSchema.index({ userId: 1 });
+
+// ==========================================
 
 const Result: Model<IResult> = mongoose.models.Result || mongoose.model<IResult>("Result", ResultSchema);
 export default Result;
