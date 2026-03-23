@@ -22,7 +22,7 @@ const SectionSchema: Schema<Section> = new Schema({
 
 const TestSchema: Schema<ITest> = new Schema(
     {
-        title: { type: String, required: true },
+        title: { type: String, required: true, index: true },
         timeLimit: { type: Number, required: true },
         difficulty: { type: String, required: true },
         sections: [SectionSchema],

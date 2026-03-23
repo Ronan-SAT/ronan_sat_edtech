@@ -1,33 +1,38 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react"; // Bổ sung Suspense
+import { useSearchParams } from "next/navigation";     // Bổ sung useSearchParams để đọc URL
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
 import Loading from "@/components/Loading";
 import ReviewPopup from "@/components/ReviewPopup";
 import {
-    BookOpen,
-    Calculator,
-    CalendarDays,
-    CheckCircle2,
-    ChevronRight,
-    ClipboardList,
-    FileText,
-    Layers,
-    LayoutGrid,
-    Trophy,
-    XCircle,
-    MinusCircle,
+    BookOpen, Calculator, CalendarDays, CheckCircle2, ChevronRight,
+    ClipboardList, FileText, Layers, LayoutGrid, Trophy, XCircle, MinusCircle,
 } from "lucide-react";
 
-export default function GridReviewPage() {
+// Tách logic chính ra một Component riêng có tên là ReviewContent
+function ReviewContent() {
     const { status } = useSession();
+    
+    // Đọc tham số từ đường link URL
+    const searchParams = useSearchParams();
+    const urlMode = searchParams.get("mode");     // Lấy ra chữ "full" hoặc "sectional" từ URL
+    const urlTestId = searchParams.get("testId"); // Lấy ra ID bài thi từ URL
+
     const [results, setResults] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [activeTestId, setActiveTestId] = useState<string | null>(null);
-    const [testType, setTestType] = useState<"full" | "sectional">("full");
+    // THAY ĐỔI 1: Thay vì mặc định là "full", chúng ta kiểm tra xem urlMode là gì. 
+    // Nếu URL là "?mode=sectional" thì mở tab sectional, ngược lại thì mở tab full
+    const [testType, setTestType] = useState<"full" | "sectional">(
+        urlMode === "sectional" ? "sectional" : "full"
+    );
+
+    // THAY ĐỔI 2: Ưu tiên lấy ID bài thi trên URL gán cho bài đang được hiển thị.
+    // Nếu không có thì mới để là null
+    const [activeTestId, setActiveTestId] = useState<string | null>(urlTestId || null);
 
     const [selectedAnswer, setSelectedAnswer] = useState<any | null>(null);
     const [expandedExplanations, setExpandedExplanations] = useState<Record<string, string>>({});
@@ -39,18 +44,30 @@ export default function GridReviewPage() {
             api.get(API_PATHS.RESULTS).then(res => {
                 const data = res.data.results || [];
                 setResults(data);
+                
                 if (data.length > 0) {
-                    const firstMatch = data.find((r: any) =>
+                    // Lọc ra danh sách bài thi khớp với Tab hiện tại đang bật (full hoặc sectional)
+                    const filteredData = data.filter((r: any) =>
                         testType === "full" ? !r.isSectional : r.isSectional
                     );
-                    if (firstMatch) setActiveTestId(firstMatch._id);
+
+                    // THAY ĐỔI 3: Kiểm tra xem ID bài thi đang mở (activeTestId) có nằm trong danh sách của Tab này không.
+                    // Nếu người dùng bấm chuyển qua lại giữa các Tab, ID cũ sẽ bị sai, hệ thống cần chọn lại bài thi đầu tiên của Tab mới.
+                    const isValidActiveTest = filteredData.some((r: any) => r._id === activeTestId);
+                    
+                    if (!isValidActiveTest && filteredData.length > 0) {
+                        setActiveTestId(filteredData[0]._id);
+                    } else if (filteredData.length === 0) {
+                        setActiveTestId(null); // Nếu tab đó không có bài thi nào thì xóa màn hình
+                    }
                 }
                 setLoading(false);
             }).catch(console.error);
         }
-    }, [status, testType]);
+    }, [status, testType]); // Loại bỏ activeTestId khỏi mảng điều kiện để tránh Component bị tải lại vô hạn
 
     const handleExpandExplanation = async (questionId: string) => {
+        // ... (Giữ nguyên toàn bộ phần code từ hàm này trở xuống cho đến hết phần return giao diện của bạn)
         if (expandedExplanations[questionId]) return;
         setLoadingExplanations(prev => ({ ...prev, [questionId]: true }));
         try {
@@ -404,5 +421,12 @@ export default function GridReviewPage() {
                 />
             )}
         </div>
+    );
+}
+export default function GridReviewPage() {
+    return (
+        <Suspense fallback={<Loading />}>
+            <ReviewContent />
+        </Suspense>
     );
 }

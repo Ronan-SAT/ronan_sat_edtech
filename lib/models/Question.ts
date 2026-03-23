@@ -29,7 +29,7 @@
 
     const QuestionSchema: Schema<IQuestion> = new Schema(
         {
-            testId: { type: Schema.Types.ObjectId, ref: "Test", required: true },
+            testId: { type: Schema.Types.ObjectId, ref: "Test", required: true, index: true },
             section: { type: String, required: true },
             module: { type: Number, required: true },
             questionText: { type: String, required: true },

@@ -223,8 +223,7 @@ export default function TestEngine({ testId }: { testId: string }) {    // Lấy
                 });
 
                 if (res.status === 200 || res.status === 201) {
-                    router.push("/review");
-                }
+                     router.push(`/review?testId=${testId}&mode=full`);                }
             }
         } catch (err) {
             console.error(err);

@@ -39,6 +39,7 @@ export const resultService = {
 
         // Ensure Question model is registered before populating
         require("@/lib/models/Question");
+        require("@/lib/models/Test");
 
         let query: any = { userId: userId };
 
