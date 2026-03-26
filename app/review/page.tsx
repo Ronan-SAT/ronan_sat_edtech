@@ -394,17 +394,23 @@ function ReviewContent() {
                             );
                         })()}
 
-                        {/* Legend */}
-                        <div className="flex items-center gap-4 px-1 pb-4">
-                            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Legend:</span>
-                            <span className="flex items-center gap-1.5 text-xs text-emerald-700">
-                                <span className="w-3 h-3 rounded-md bg-emerald-500 inline-block" /> Correct
+                        {/* Colors */}
+                      <div className="flex items-center gap-4 px-1 pb-4">
+                            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Colors:</span>
+                            
+                            {/* Correct - Xanh lá nhạt, viền đậm */}
+                            <span className="flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
+                                <span className="w-3.5 h-3.5 rounded-md bg-emerald-50 border border-emerald-400 inline-block" /> Correct
                             </span>
-                            <span className="flex items-center gap-1.5 text-xs text-red-700">
-                                <span className="w-3 h-3 rounded-md bg-red-500 inline-block" /> Incorrect
+                            
+                            {/* Incorrect - Đỏ nhạt, viền đậm */}
+                            <span className="flex items-center gap-1.5 text-xs text-red-700 font-medium">
+                                <span className="w-3.5 h-3.5 rounded-md bg-red-50 border border-red-400 inline-block" /> Incorrect
                             </span>
-                            <span className="flex items-center gap-1.5 text-xs text-slate-400">
-                                <span className="w-3 h-3 rounded-md bg-slate-200 border border-slate-300 inline-block" /> Omitted
+                            
+                            {/* Omitted - Xám nhạt, viền đậm */}
+                            <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                <span className="w-3.5 h-3.5 rounded-md bg-slate-50 border border-slate-300 inline-block" /> Omitted
                             </span>
                         </div>
                     </div>
