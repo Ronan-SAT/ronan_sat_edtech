@@ -9,6 +9,7 @@ interface TestHeaderProps {
     sectionName: string;
     timeRemaining: number;
     onTimeUp: () => void;
+    isSubmitting?: boolean;
     isTimerHidden: boolean;
     setIsTimerHidden: (hide: boolean) => void;
     isLastModule?: boolean;
@@ -24,6 +25,7 @@ export default function TestHeader({
     sectionName,
     timeRemaining,
     onTimeUp,
+    isSubmitting = false,
     isTimerHidden,
     setIsTimerHidden,
     onToggleCalculator,
@@ -93,12 +95,15 @@ export default function TestHeader({
             ? "You are about to finish the test. You cannot go back to any module after this." 
             : "Once you move to the next module, you cannot return to the current questions.")}
         onConfirm={onTimeUp} 
+        disabled={isSubmitting}
         okText="Yes"
         cancelText="No"
         placement="bottomRight"
     >
         <Button 
             type="default" 
+            loading={isSubmitting}
+            disabled={isSubmitting}
             danger={buttonText === "Submit Module" || buttonText === "Submit Test" || isLastModule} 
             className={`
                 rounded-full px-8 h-10 font-semibold transition-all border-2

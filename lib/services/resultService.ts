@@ -53,18 +53,25 @@ export const resultService = {
       throw new Error("Invalid test ID");
     }
 
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid user ID");
+    }
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+    const testObjectId = new mongoose.Types.ObjectId(validatedData.testId);
+
     await dbConnect();
 
-    const [test, user] = await Promise.all([
+    const [test, userExists] = await Promise.all([
       Test.findById(validatedData.testId).lean(),
-      User.findById(userId),
+      User.exists({ _id: userObjectId }),
     ]);
 
     if (!test) {
       throw new Error("Test not found");
     }
 
-    if (!user) {
+    if (!userExists) {
       throw new Error("User not found");
     }
 
@@ -142,8 +149,8 @@ export const resultService = {
     }
 
     const newResult = await Result.create({
-      userId,
-      testId: validatedData.testId,
+      userId: userObjectId,
+      testId: testObjectId,
       isSectional,
       sectionalSubject: validatedData.sectionalSubject,
       sectionalModule: validatedData.sectionalModule,
@@ -155,17 +162,34 @@ export const resultService = {
       mathScore,
     });
 
-    user.testsTaken.push(new mongoose.Types.ObjectId(validatedData.testId));
+    const wrongIds = gradedAnswers.filter((answer) => !answer.isCorrect).map((answer) => answer.questionId);
+    const userUpdate: {
+      $set: { lastTestDate: Date };
+      $push: { testsTaken: mongoose.Types.ObjectId };
+      $addToSet?: { wrongQuestions: { $each: mongoose.Types.ObjectId[] } };
+      $max?: { highestScore: number };
+    } = {
+      $set: { lastTestDate: new Date() },
+      $push: { testsTaken: testObjectId },
+    };
 
-    if (!isSectional && score && score > (user.highestScore || 0)) {
-      user.highestScore = score;
+    if (!isSectional && typeof score === "number") {
+      userUpdate.$max = { highestScore: score };
     }
 
-    user.lastTestDate = new Date();
+    if (wrongIds.length > 0) {
+      userUpdate.$addToSet = {
+        wrongQuestions: {
+          $each: wrongIds,
+        },
+      };
+    }
 
-    const wrongIds = gradedAnswers.filter((answer) => !answer.isCorrect).map((answer) => answer.questionId);
-    user.wrongQuestions.push(...wrongIds);
-    await user.save();
+    try {
+      await User.updateOne({ _id: userObjectId }, userUpdate);
+    } catch (userUpdateError) {
+      console.error("User stats update failed after result creation", userUpdateError);
+    }
 
     return newResult;
   },
