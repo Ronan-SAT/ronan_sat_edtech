@@ -12,6 +12,7 @@ import { generatePDFTemplate } from "@/utils/questionTemplate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Yêu cầu Vercel cho phép tiến trình này chạy tối đa 60 giây
 
 const SECTION_ALIAS: Record<string, string> = {
   reading: "Reading and Writing",
