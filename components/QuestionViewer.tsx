@@ -71,6 +71,14 @@ export default function QuestionViewer({
   );
   const crossedOut = crossedOutByQuestion[question._id] ?? [];
   const showElimination = showEliminationByQuestion[question._id] ?? false;
+  const passageContent = useMemo(() => {
+    if (!question.passage) {
+      return null;
+    }
+
+    return <Latex>{question.passage}</Latex>;
+  }, [question.passage]);
+  const questionTextContent = useMemo(() => <Latex>{question.questionText ?? ""}</Latex>, [question.questionText]);
 
   const updateAnnotations = (part: "passage" | "questionText", nextAnnotations: TextAnnotation[]) => {
     setAnnotationsByQuestion((previous) => ({
@@ -130,7 +138,7 @@ export default function QuestionViewer({
               className="whitespace-pre-wrap font-serif text-[15px] leading-relaxed text-slate-900 selection:bg-yellow-200 selection:text-black"
               sourceQuestionId={question._id}
             >
-              <Latex>{question.passage ?? ""}</Latex>
+              {passageContent}
             </SelectableTextPanel>
           ) : null}
         </div>
@@ -215,7 +223,7 @@ export default function QuestionViewer({
           className="px-6 pb-3 pt-3 text-[15px] leading-relaxed text-slate-900"
           sourceQuestionId={question._id}
         >
-          <Latex>{question.questionText ?? ""}</Latex>
+          {questionTextContent}
         </SelectableTextPanel>
 
         <div className="flex-1 px-6 pb-8">

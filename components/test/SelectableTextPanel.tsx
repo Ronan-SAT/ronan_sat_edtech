@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { useVocabBoard } from "@/components/vocab/VocabBoardProvider";
 
@@ -48,6 +49,7 @@ export default function SelectableTextPanel({
 }: SelectableTextPanelProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const nextAnnotationIdRef = useRef(0);
+  const lastAppliedSignatureRef = useRef<string | null>(null);
   const [toolbar, setToolbar] = useState<ToolbarState | null>(null);
   const { addVocabCard } = useVocabBoard();
   const pendingSelection = toolbar?.pendingSelection ?? null;
@@ -61,6 +63,11 @@ export default function SelectableTextPanel({
       return;
     }
 
+    const nextSignature = createRenderSignature(root, annotations);
+    if (lastAppliedSignatureRef.current === nextSignature) {
+      return;
+    }
+
     unwrapAnnotations(root);
 
     const ordered = [...annotations].sort((left, right) => left.start - right.start);
@@ -68,9 +75,16 @@ export default function SelectableTextPanel({
       applyAnnotation(root, annotation);
     });
 
-    if (pendingSelection) {
-      applyPendingSelection(root, pendingSelection);
+    lastAppliedSignatureRef.current = nextSignature;
+  });
+
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root || !pendingSelection) {
+      return;
     }
+
+    restorePendingSelection(root, pendingSelection);
   });
 
   useEffect(() => {
@@ -186,18 +200,20 @@ export default function SelectableTextPanel({
     }
 
     if (toolbar.activeAnnotationId) {
-      onChange(
-        annotations.map((annotation) =>
-          annotation.id === toolbar.activeAnnotationId
-            ? {
-                ...annotation,
-                color: payload.color === undefined ? annotation.color : payload.color,
-                underline: payload.underline === undefined ? annotation.underline : payload.underline,
-              }
-            : annotation,
-        ),
-      );
-      setToolbar((current) => (current ? { ...current } : current));
+      flushSync(() => {
+        onChange(
+          annotations.map((annotation) =>
+            annotation.id === toolbar.activeAnnotationId
+              ? {
+                  ...annotation,
+                  color: payload.color === undefined ? annotation.color : payload.color,
+                  underline: payload.underline === undefined ? annotation.underline : payload.underline,
+                }
+              : annotation,
+          ),
+        );
+        setToolbar((current) => (current ? { ...current } : current));
+      });
       clearSelection();
       return;
     }
@@ -215,12 +231,14 @@ export default function SelectableTextPanel({
       underline: payload.underline ?? false,
     };
 
-    onChange([...annotations, nextAnnotation]);
-    setToolbar({
-      ...toolbar,
-      activeAnnotationId: nextAnnotation.id,
-      pendingSelection: null,
-      pendingText: "",
+    flushSync(() => {
+      onChange([...annotations, nextAnnotation]);
+      setToolbar({
+        ...toolbar,
+        activeAnnotationId: nextAnnotation.id,
+        pendingSelection: null,
+        pendingText: "",
+      });
     });
     clearSelection();
   };
@@ -258,6 +276,7 @@ export default function SelectableTextPanel({
       {toolbar ? (
         <div
           data-annotation-toolbar
+          onMouseDown={(event) => event.preventDefault()}
           className="fixed z-[100] flex flex-col items-center rounded-[24px] border border-slate-300 bg-white px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.16)]"
           style={{
             top: toolbar.top,
@@ -362,27 +381,8 @@ function applyAnnotation(root: HTMLElement, annotation: TextAnnotation) {
   range.insertNode(wrapper);
 }
 
-function applyPendingSelection(root: HTMLElement, pendingSelection: PendingSelection) {
-  const range = createRangeFromOffsets(root, pendingSelection.start, pendingSelection.end);
-  if (!range) {
-    return;
-  }
-
-  const wrapper = document.createElement("span");
-  wrapper.dataset.pendingSelection = "true";
-  wrapper.style.backgroundColor = "#fde68a";
-  wrapper.style.boxDecorationBreak = "clone";
-  wrapper.style.setProperty("-webkit-box-decoration-break", "clone");
-  wrapper.style.borderRadius = "2px";
-  wrapper.style.opacity = "0.95";
-
-  const fragment = range.extractContents();
-  wrapper.appendChild(fragment);
-  range.insertNode(wrapper);
-}
-
 function unwrapAnnotations(root: HTMLElement) {
-  const wrappers = Array.from(root.querySelectorAll("[data-text-annotation-id], [data-pending-selection]"));
+  const wrappers = Array.from(root.querySelectorAll("[data-text-annotation-id]"));
   wrappers.forEach((wrapper) => {
     const parent = wrapper.parentNode;
     if (!parent) {
@@ -416,28 +416,16 @@ function createRangeFromOffsets(root: HTMLElement, start: number, end: number) {
 }
 
 function getTextOffset(root: HTMLElement, container: Node, offset: number) {
-  // 1. Khắc phục lỗi xoay/kéo chuột ra ngoài mép chữ
-  // Dùng hàm có sẵn để nắn vị trí chuột trượt về đúng đoạn text gần nhất
-  const point = normalizePointToTextNode(root, container, offset);
-  if (!point) {
+  const range = document.createRange();
+  range.selectNodeContents(root);
+
+  try {
+    range.setEnd(container, offset);
+  } catch {
     return 0;
   }
 
-  // 2. Khắc phục lỗi lệch chữ
-  // Chỉ đếm vị trí trên các node hiển thị thật (đồng bộ 100% với hàm vẽ màu bôi đen)
-  const textNodes = getSelectableTextNodes(root);
-  let currentOffset = 0;
-
-  for (const node of textNodes) {
-    // Nếu tìm thấy đúng đoạn text chuột đang trỏ vào
-    if (node === point.node) {
-      return currentOffset + point.offset;
-    }
-    // Cộng dồn độ dài của các đoạn chữ đi qua
-    currentOffset += node.data.length;
-  }
-
-  return currentOffset;
+  return range.toString().length;
 }
 
 function getTextSlice(root: HTMLElement, start: number, end: number) {
@@ -455,7 +443,7 @@ function getSelectableTextNodes(root: HTMLElement) {
         return NodeFilter.FILTER_REJECT;
       }
 
-      if (parentElement.closest("[data-annotation-toolbar], [data-text-annotation-id], [data-pending-selection]")) {
+      if (parentElement.closest("[data-annotation-toolbar]")) {
         return NodeFilter.FILTER_REJECT;
       }
 
@@ -489,72 +477,7 @@ function getSelectableTextNodes(root: HTMLElement) {
   return nodes;
 }
 
-function normalizePointToTextNode(root: HTMLElement, container: Node, offset: number) {
-  const textNodes = getSelectableTextNodes(root);
-  if (textNodes.length === 0) {
-    return null;
-  }
 
-  if (container.nodeType === Node.TEXT_NODE) {
-    const textNode = container as Text;
-    if (!textNodes.includes(textNode)) {
-      return null;
-    }
-
-    return {
-      node: textNode,
-      offset: Math.min(offset, textNode.data.length),
-    };
-  }
-
-  const element = container as Element;
-  const childNodes = Array.from(element.childNodes);
-  const leftBoundaryNode = childNodes[Math.max(0, offset - 1)] ?? null;
-  const rightBoundaryNode = childNodes[offset] ?? null;
-
-  const rightTextNode = findBoundaryTextNode(rightBoundaryNode, "start", textNodes);
-  if (rightTextNode) {
-    return {
-      node: rightTextNode,
-      offset: 0,
-    };
-  }
-
-  const leftTextNode = findBoundaryTextNode(leftBoundaryNode, "end", textNodes);
-  if (leftTextNode) {
-    return {
-      node: leftTextNode,
-      offset: leftTextNode.data.length,
-    };
-  }
-
-  return null;
-}
-
-function findBoundaryTextNode(node: Node | null, direction: "start" | "end", textNodes: Text[]) {
-  if (!node) {
-    return null;
-  }
-
-  if (node.nodeType === Node.TEXT_NODE) {
-    return textNodes.includes(node as Text) ? (node as Text) : null;
-  }
-
-  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
-  const matches: Text[] = [];
-  let currentNode: Node | null = null;
-  while ((currentNode = walker.nextNode())) {
-    if (textNodes.includes(currentNode as Text)) {
-      matches.push(currentNode as Text);
-    }
-  }
-
-  if (matches.length === 0) {
-    return null;
-  }
-
-  return direction === "start" ? matches[0] : matches[matches.length - 1];
-}
 
 function resolveTextPoint(root: HTMLElement, absoluteOffset: number) {
   const textNodes = getSelectableTextNodes(root);
@@ -586,6 +509,35 @@ function clearSelection() {
   selection?.removeAllRanges();
 }
 
+function restorePendingSelection(root: HTMLElement, pendingSelection: PendingSelection) {
+  const range = createRangeFromOffsets(root, pendingSelection.start, pendingSelection.end);
+  const selection = window.getSelection();
+  if (!range || !selection) {
+    return;
+  }
+
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function createRenderSignature(root: HTMLElement, annotations: TextAnnotation[]) {
+  const textContent = root.textContent ?? "";
+  const orderedAnnotations = [...annotations]
+    .sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id))
+    .map((annotation) => ({
+      id: annotation.id,
+      start: annotation.start,
+      end: annotation.end,
+      color: annotation.color,
+      underline: annotation.underline,
+    }));
+
+  return JSON.stringify({
+    textContent,
+    annotations: orderedAnnotations,
+  });
+}
+
 function UnderlineIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -606,3 +558,4 @@ function TrashIcon() {
     </svg>
   );
 }
+
