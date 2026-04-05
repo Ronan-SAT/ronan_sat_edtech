@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-// Đã thay đổi import: Xóa ChevronLeft/ChevronRight và thêm ChevronUp cho nút Grid
-import { ChevronUp, Check, Flag } from "lucide-react";
-import { Button } from "antd";
+import { Check, ChevronDown, Flag, MapPin, X } from "lucide-react";
 
 interface TestFooterProps {
     moduleName?: string;
@@ -14,7 +12,7 @@ interface TestFooterProps {
     onJump: (index: number) => void;
     answers: Record<string, string>;
     flagged: Record<string, boolean>;
-    questions: any[];
+    questions: Array<{ _id: string }>;
 }
 
 export default function TestFooter({
@@ -28,45 +26,53 @@ export default function TestFooter({
     flagged,
     questions
 }: TestFooterProps) {
-
     const [isGridOpen, setIsGridOpen] = useState(false);
+    const headerTitle = moduleName ?? "Question Navigator";
+    const displayName = typeof window === "undefined"
+        ? "Practice Test"
+        : sessionStorage.getItem("testName") || "Practice Test";
 
     return (
         <>
             {isGridOpen && (
                 <>
-                    {/* Lớp nền vô hình: Bấm ra ngoài vùng chữ nhật sẽ tự động đóng Grid */}
-                    <div 
-                        className="fixed inset-0 z-30" 
+                    <div
+                        className="fixed inset-0 z-30 bg-black/5"
                         onClick={() => setIsGridOpen(false)}
-                    ></div>
+                    />
 
-                    {/* Khung Pop-up hình chữ nhật nhỏ xinh */}
-                    <div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-[0_0_20px_rgba(0,0,0,0.15)] border border-slate-200 z-40 w-[340px] sm:w-[420px] p-5 transition-all animate-in fade-in zoom-in-95 duration-200">
-                        
-                        {/* Header của pop-up */}
-                        <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
-                            <h3 className="text-base font-bold text-slate-800">Select a Question</h3>
-                            <Button 
-                                type="text" 
-                                size="small" 
+                    <div className="fixed bottom-[78px] left-1/2 z-40 w-[min(92vw,595px)] -translate-x-1/2 rounded-[14px] border border-slate-200 bg-white px-6 pb-7 pt-5 shadow-[0_10px_28px_rgba(15,23,42,0.18)] transition-all animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div className="w-8 shrink-0" />
+                            <h3 className="flex-1 text-center text-[18px] font-semibold leading-[1.15] text-[#0f172a] sm:text-[19px]">
+                                {headerTitle}
+                            </h3>
+                            <button
+                                type="button"
                                 onClick={() => setIsGridOpen(false)}
-                                className="text-slate-500 hover:text-slate-700"
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                                aria-label="Close question navigator"
                             >
-                                Close
-                            </Button>
+                                <X className="h-4 w-4" strokeWidth={2} />
+                            </button>
                         </div>
 
-                        {/* Chú thích (Legend) thu nhỏ lại thành 2 cột cho vừa khung */}
-                        <div className="grid grid-cols-2 gap-y-2 gap-x-1 mb-5 text-xs font-medium text-slate-600">
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-900 rounded-sm"></div> Current</div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 border border-blue-600 bg-blue-50 text-blue-600 flex items-center justify-center rounded-sm"><Check className="w-2 h-2" /></div> Answered</div>
-                            <div className="flex items-center gap-1.5"><div className="w-3 h-3 bg-slate-100 border border-slate-300 rounded-sm"></div> Unanswered</div>
-                            <div className="flex items-center gap-1.5"><Flag className="w-3 h-3 fill-amber-400 text-amber-500" /> For Review</div>
+                        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-b border-slate-200 py-3 text-[12px] font-medium text-slate-700">
+                            <div className="flex items-center gap-1.5">
+                                <MapPin className="h-4 w-4 text-slate-700" strokeWidth={2} />
+                                <span>Current</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="h-4 w-4 border border-dashed border-slate-500 bg-white" />
+                                <span>Unanswered</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Flag className="h-3.5 w-3.5 fill-[#d9485f] text-[#d9485f]" />
+                                <span>For Review</span>
+                            </div>
                         </div>
 
-                        {/* Lưới câu hỏi: Thu lại còn 5 cột thay vì 10 cột để nút không bị méo */}
-                        <div className="grid grid-cols-5 gap-2 max-h-[45vh] overflow-y-auto pr-1">
+                        <div className="mx-auto mt-4 flex max-h-[196px] w-full max-w-[500px] flex-wrap justify-start gap-x-[14px] gap-y-[18px] overflow-y-auto px-1 pb-1">
                             {questions.map((q, i) => {
                                 const isAnswered = !!answers[q._id];
                                 const isFlagged = !!flagged[q._id];
@@ -75,78 +81,91 @@ export default function TestFooter({
                                 return (
                                     <button
                                         key={q._id}
+                                        type="button"
                                         onClick={() => {
                                             onJump(i);
-                                            setIsGridOpen(false); 
+                                            setIsGridOpen(false);
                                         }}
-                                        className={`
-                                            cursor-pointer relative w-full aspect-square flex items-center justify-center rounded text-sm font-semibold transition-all border-2 
-                                            ${isCurrent ? 'bg-slate-900 border-slate-900 text-white transform scale-105 z-10' :
-                                            isAnswered ? 'bg-blue-50 border-blue-200 text-blue-900 hover:bg-blue-100 hover:border-blue-300' :
-                                            'bg-white border-slate-200 text-slate-600 hover:border-slate-400'}
-                                        `}
+                                        className={`relative flex h-[30px] w-[30px] shrink-0 items-center justify-center text-[14px] font-semibold transition-all ${
+                                            isCurrent
+                                                ? "border border-slate-700 bg-white text-[#3557d6] shadow-[0_0_0_1px_rgba(31,41,55,0.06)]"
+                                                : isAnswered
+                                                    ? "border border-[#8aa1ff] bg-[#eef2ff] text-[#3557d6] hover:border-[#5d7cff]"
+                                                    : "border border-dashed border-slate-500 bg-white text-[#3557d6] hover:border-slate-700"
+                                        }`}
+                                        aria-label={`Jump to question ${i + 1}`}
                                     >
-                                        {isAnswered && !isCurrent && <Check className="w-3 h-3 absolute top-0.5 right-0.5 opacity-50" />}
-                                        {i + 1}
-                                        {isFlagged && ( 
-                                            <div className="absolute -top-1.5 -right-1.5 bg-white rounded-full">
-                                                <Flag className="w-4 h-4 fill-amber-400 text-amber-500" />
+                                        {isCurrent ? (
+                                            <MapPin className="pointer-events-none absolute -top-[13px] left-1/2 h-4 w-4 -translate-x-1/2 text-slate-700" strokeWidth={2} />
+                                        ) : null}
+                                        <span>{i + 1}</span>
+                                        {isAnswered && !isCurrent ? (
+                                            <Check className="pointer-events-none absolute right-[1px] top-[1px] h-2.5 w-2.5 text-[#3557d6] opacity-70" />
+                                        ) : null}
+                                        {isFlagged ? (
+                                            <div className="pointer-events-none absolute -right-[5px] -top-[6px] rounded-full bg-white p-[1px]">
+                                                <Flag className="h-3 w-3 fill-[#d9485f] text-[#d9485f]" />
                                             </div>
-                                        )}
+                                        ) : null}
                                     </button>
-                                )
+                                );
                             })}
                         </div>
-                        
-                        {/* Mũi tên chĩa xuống thanh Footer cho đẹp */}
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-slate-200 transform rotate-45"></div>
+
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                type="button"
+                                onClick={() => setIsGridOpen(false)}
+                                className="rounded-full border border-[#5d7cff] px-6 py-2 text-sm font-semibold text-[#3557d6] transition hover:bg-[#eef2ff]"
+                            >
+                                Go to Review Page
+                            </button>
+                        </div>
+
+                        <div className="absolute -bottom-[9px] left-1/2 h-[18px] w-[18px] -translate-x-1/2 rotate-45 border-b border-r border-slate-200 bg-white" />
                     </div>
                 </>
             )}
 
-            {/* ĐỔI bg-[#f2f6fa] THÀNH bg-[#ebf0f7] CHO BOTTOM BAR */}
-            {/* Đã xóa bỏ class 'relative' ở cuối dòng này */}
-            <footer className="fixed bottom-0 left-0 right-0 h-16 bg-[#ebf0f7] border-t border-slate-300 flex items-center justify-between px-6 z-50">
-                
-                {/* ĐƯỜNG PHÂN CÁCH DƯỚI (TRÊN BOTTOM BAR) */}
-                <div 
-                    className="absolute top-0 left-0 w-full h-[2px]" 
-                    style={{ backgroundImage: 'repeating-linear-gradient(to right, #2d3642 0, #1c2128 19px, transparent 19px, transparent 20px)' }}
-                ></div>
+            <footer className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-between border-t border-slate-300 bg-[#ebf0f7] px-6">
+                <div
+                    className="absolute left-0 top-0 h-[2px] w-full"
+                    style={{ backgroundImage: "repeating-linear-gradient(to right, #2d3642 0, #1c2128 19px, transparent 19px, transparent 20px)" }}
+                />
 
                 <div className="flex-1">
-                    <span className="font-semibold text-slate-800 text-sm sm:text-base">
-                        {sessionStorage.getItem('testName') || "Vinh Le"}
+                    <span suppressHydrationWarning className="text-sm font-semibold text-slate-800 sm:text-base">
+                        {displayName}
                     </span>
                 </div>
 
-                <div className="flex-1 flex justify-center items-center">
-                    {/* Nút Grid màu đen giống ảnh, thêm bo góc rounded-md, đổi icon thành ChevronUp */}
+                <div className="flex flex-1 items-center justify-center">
                     <button
+                        type="button"
                         onClick={() => setIsGridOpen(!isGridOpen)}
-                        className="cursor-pointer font-bold text-white bg-[#1a1c23] hover:bg-black transition-colors px-4 py-2 rounded-md flex items-center shadow-sm text-sm"
+                        className="flex items-center rounded-md bg-[#1a1c23] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-black"
                     >
                         <span>Question {currentIndex + 1} of {totalQuestions}</span>
-                        <ChevronUp className={`w-4 h-4 transition-transform ${isGridOpen ? 'rotate-180' : ''} inline-block ml-2`} />
+                        <ChevronDown className={`ml-2 inline-block h-4 w-4 transition-transform ${isGridOpen ? "rotate-180" : ""}`} />
                     </button>
                 </div>
 
-                <div className="flex-1 flex justify-end items-center gap-3">
-                    {/* Chuyển nút Back thành nút thường, màu xanh, dáng viên thuốc (pill), bỏ icon */}
+                <div className="flex flex-1 items-center justify-end gap-3">
                     {currentIndex > 0 && (
                         <button
+                            type="button"
                             onClick={onPrev}
-                            className="cursor-pointer bg-[#3b5bd9] hover:bg-[#2e4bb5] text-white font-semibold py-1.5 px-6 rounded-full transition-colors text-sm"
+                            className="rounded-full bg-[#3b5bd9] px-6 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#2e4bb5]"
                         >
                             Back
                         </button>
                     )}
 
-                    {/* Chuyển nút Next thành nút thường, màu xanh, dáng viên thuốc (pill), bỏ icon */}
                     {currentIndex < totalQuestions - 1 && (
                         <button
+                            type="button"
                             onClick={onNext}
-                            className="cursor-pointer bg-[#3b5bd9] hover:bg-[#2e4bb5] text-white font-semibold py-1.5 px-6 rounded-full transition-colors text-sm"
+                            className="rounded-full bg-[#3b5bd9] px-6 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#2e4bb5]"
                         >
                             Next
                         </button>

@@ -9,10 +9,11 @@ import { API_PATHS } from "@/lib/apiPaths";
 import Link from "next/link";
 import { useState, useEffect } from "react"; // Thêm useEffect
 import { useSession } from "next-auth/react"; // Thêm dòng này để kiểm tra máy quét đăng nhập
+import { AxiosError } from "axios";
 
 export default function AuthPage() {
     const router = useRouter();                     // Máy routing
-    const { data: session, status } = useSession(); // Lấy trạng thái xem đã đăng nhập chưa, nếu rồi thì đá về trang chủ
+    const { status } = useSession(); // Lấy trạng thái xem đã đăng nhập chưa, nếu rồi thì đá về trang chủ
     useEffect(() => {
         if (status === "authenticated") {
             router.push("/full-length");
@@ -72,9 +73,14 @@ export default function AuthPage() {
                     setError(res.data.message || "Registration failed");
                 }
             }
-        } catch (err: any) {    
+        } catch (err: unknown) {    
             setIsError(true);
-            setError(err.response?.data?.message || err.response?.data?.error || "An unexpected error occurred");
+            const axiosError = err as AxiosError<{ message?: string; error?: string }>;
+            setError(
+                axiosError.response?.data?.message ||
+                axiosError.response?.data?.error ||
+                "An unexpected error occurred"
+            );
         } finally {     // Tắt animation lỗi và trả lại function cho nút gửi
             setLoading(false);
         }
@@ -146,7 +152,7 @@ export default function AuthPage() {
 
                         {isLogin && (
                             <div className="flex justify-end mt-1">
-                                <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:underline">
+                                <Link href="/auth/forgot-password" className="cursor-pointer text-sm text-blue-600 hover:underline">
                                     Forgot password?
                                 </Link>
                             </div>
@@ -156,7 +162,7 @@ export default function AuthPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg duration-200 disabled:opacity-50"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {loading ? "Please wait..." : isLogin ? "Sign In" : "Register"}
                     </button>
@@ -176,7 +182,7 @@ export default function AuthPage() {
                     <button
                         onClick={() => signIn("google", { callbackUrl: "/full-length" })}
                         disabled={loading}
-                        className="mt-4 w-full flex items-center justify-center gap-3 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors font-medium disabled:opacity-50"
+                        className="mt-4 w-full flex items-center justify-center gap-3 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors font-medium disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -195,7 +201,7 @@ export default function AuthPage() {
                             setError("");
                             setIsError(false); // Trả lại trạng thái bình thường khi đổi form
                         }}
-                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                        className="cursor-pointer text-sm text-blue-600 hover:text-blue-800 hover:underline"
                     >
                         {isLogin
                             ? "Don't have an account? Sign up"

@@ -36,3 +36,15 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+button:not(:disabled),
+a[href],
+summary,
+label[for],
+select:not(:disabled),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}

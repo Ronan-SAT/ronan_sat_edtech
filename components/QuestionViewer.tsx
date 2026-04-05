@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CldImage } from "next-cloudinary";
 import Latex from "react-latex-next";
+import { Bookmark } from "lucide-react";
 
 import SelectableTextPanel, { type TextAnnotation } from "@/components/test/SelectableTextPanel";
 import { getChoiceCode } from "@/utils/gradingHelper";
@@ -175,12 +176,13 @@ export default function QuestionViewer({
             <div className="flex flex-1 items-center justify-between bg-slate-100 px-3">
               <button
                 onClick={() => onToggleFlag(question._id)}
-                className={`cursor-pointer select-none text-[13px] transition-all ${
+                className={`cursor-pointer inline-flex select-none items-center gap-1.5 text-[13px] transition-all ${
                   isFlagged
                     ? "font-semibold text-[#1e3a5f] underline underline-offset-2 hover:font-medium hover:no-underline"
                     : "font-medium text-slate-700 hover:font-semibold hover:text-[#1e3a5f] hover:underline hover:underline-offset-2"
                 }`}
               >
+                <Bookmark className={`h-[13px] w-[13px] ${isFlagged ? "fill-current" : ""}`} strokeWidth={1.9} />
                 Mark for Review
               </button>
 

@@ -113,6 +113,7 @@ export default function TestEngine({ testId }: { testId: string }) {
       </main>
 
       <TestFooter
+        moduleName={`Section ${currentStage.section === "Math" ? 2 : 1}, Module ${currentStage.module}: ${currentStage.section}`}
         currentIndex={currentIndex}
         totalQuestions={currentModuleQuestions.length}
         onNext={handleNext}

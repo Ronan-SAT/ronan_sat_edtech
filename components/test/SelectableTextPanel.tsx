@@ -277,7 +277,7 @@ export default function SelectableTextPanel({
         <div
           data-annotation-toolbar
           onMouseDown={(event) => event.preventDefault()}
-          className="fixed z-[100] flex flex-col items-center rounded-[24px] border border-slate-300 bg-white px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.16)]"
+          className="fixed z-[100] flex flex-col items-center rounded-[18px] border border-slate-300 bg-white px-2.5 py-2 shadow-[0_12px_28px_rgba(15,23,42,0.14)]"
           style={{
             top: toolbar.top,
             left: toolbar.left,
@@ -288,13 +288,13 @@ export default function SelectableTextPanel({
             <button
               type="button"
               onClick={handleAddToVocab}
-              className="mb-2 text-[12px] font-semibold text-slate-600 underline underline-offset-2 transition hover:text-slate-900 hover:no-underline"
+              className="mb-1.5 text-[11px] font-semibold text-slate-600 underline underline-offset-2 transition hover:text-slate-900 hover:no-underline"
             >
               Add to Vocab
             </button>
           ) : null}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {HIGHLIGHT_COLORS.map((color) => {
               const isActive = activeAnnotation?.color === color.value;
 
@@ -305,7 +305,7 @@ export default function SelectableTextPanel({
                   title={`Highlight ${color.label}`}
                   aria-label={`Highlight ${color.label}`}
                   onClick={() => upsertAnnotation({ color: color.value })}
-                  className={`h-10 w-10 rounded-full border transition-transform hover:scale-105 ${
+                  className={`h-9 w-9 rounded-full border transition-transform hover:scale-105 ${
                     isActive ? "border-slate-700 ring-2 ring-slate-300" : "border-slate-300"
                   }`}
                   style={{ backgroundColor: color.value }}
@@ -318,7 +318,7 @@ export default function SelectableTextPanel({
               title="Underline"
               aria-label="Underline"
               onClick={() => upsertAnnotation({ underline: !(activeAnnotation?.underline ?? false) || !activeAnnotation })}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border text-slate-700 transition-colors hover:bg-slate-100 ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full border text-slate-700 transition-colors hover:bg-slate-100 ${
                 activeAnnotation?.underline ? "border-slate-700 bg-slate-100" : "border-slate-300"
               }`}
             >
@@ -331,7 +331,7 @@ export default function SelectableTextPanel({
               aria-label="Remove annotation"
               onClick={removeActiveAnnotation}
               disabled={!activeAnnotation}
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-300 text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <TrashIcon />
             </button>
