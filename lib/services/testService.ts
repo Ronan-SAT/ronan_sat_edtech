@@ -155,6 +155,11 @@ export const testService = {
   async createTest(data: unknown) {
     try {
       const validatedData: TestInput = TestValidationSchema.parse(data);
+      
+      if (!validatedData.timeLimit) {
+        validatedData.timeLimit = validatedData.sections.reduce((acc, sec) => acc + sec.timeLimit, 0);
+      }
+
       await dbConnect();
       const newTest = await Test.create(validatedData);
 

@@ -28,6 +28,8 @@ function buildPreparedQuestionPayload(row: AdminQuestionUploadRow, selectedTestI
   const payload: PreparedQuestionPayload = {
     testId: selectedTestId,
     section: normalizeString(row.section || "Reading and Writing"),
+    domain: normalizeString(row.domain),
+    skill: normalizeString(row.skill),
     module: Number(row.module) || 1,
     questionType: type,
     questionText: normalizeString(row.questionText),

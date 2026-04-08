@@ -38,7 +38,8 @@ export const testController = {
                 return NextResponse.json({ test: newTest }, { status: 201 });
             } catch (error: any) {
                 if (error.name === "ZodError") {
-                    return NextResponse.json({ error: error.errors }, { status: 400 });
+                    const errorMessage = error.errors.map((e: any) => e.message).join(", ");
+                    return NextResponse.json({ error: errorMessage }, { status: 400 });
                 }
                 throw error;
             }

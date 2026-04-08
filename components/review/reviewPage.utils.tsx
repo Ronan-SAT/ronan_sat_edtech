@@ -72,3 +72,55 @@ export function groupFullLengthAnswers(result: ReviewResult) {
     mathModule2: result.answers?.filter((answer) => answer.questionId?.section === "Math" && answer.questionId?.module === 2) || [],
   };
 }
+
+export type SkillStat = {
+  name: string;
+  wrong: number;
+  correct: number;
+  omitted: number;
+  total: number;
+};
+
+export type DomainStat = {
+  domain: string;
+  skills: SkillStat[];
+};
+
+export function getSkillPerformance(answers: ReviewAnswer[]): DomainStat[] {
+  const domainMap: Record<string, Record<string, SkillStat>> = {};
+
+  answers.forEach((answer) => {
+    const q = answer.questionId;
+    if (!q) return;
+
+    const domain = q.domain || q.subject || "Uncategorized";
+    const skill = q.skill || "General";
+
+    if (!domainMap[domain]) {
+      domainMap[domain] = {};
+    }
+
+    if (!domainMap[domain][skill]) {
+      domainMap[domain][skill] = { name: skill, wrong: 0, correct: 0, omitted: 0, total: 0 };
+    }
+
+    const stat = domainMap[domain][skill];
+    stat.total += 1;
+
+    const isOmitted = !answer.userAnswer || answer.userAnswer === "" || answer.userAnswer === "Omitted";
+    if (isOmitted) {
+      stat.omitted += 1;
+    } else if (answer.isCorrect) {
+      stat.correct += 1;
+    } else {
+      stat.wrong += 1;
+    }
+  });
+
+  const validDomains = Object.keys(domainMap).filter((d) => d !== "Uncategorized" || Object.keys(domainMap[d]).length > 0);
+
+  return validDomains.map((domain) => {
+    const skills = Object.values(domainMap[domain]).sort((a, b) => b.total - a.total);
+    return { domain, skills };
+  });
+}

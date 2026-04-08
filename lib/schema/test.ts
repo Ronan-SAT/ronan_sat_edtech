@@ -8,8 +8,8 @@ export const SectionValidationSchema = z.object({
 
 export const TestValidationSchema = z.object({
     title: z.string().min(1, "Title is required"),
-    timeLimit: z.number().min(1, "Total time limit is required"),
-    difficulty: z.string().min(1, "Difficulty is required"),
+    timeLimit: z.number().optional(),
+    difficulty: z.string().optional().default("medium"),
     sections: z.array(SectionValidationSchema).min(1, "At least one section is required"),
 });
 

@@ -1,5 +1,7 @@
 export type AdminQuestionFormState = {
   section: string;
+  domain?: string;
+  skill?: string;
   module: number;
   questionType: "multiple_choice" | "spr";
   questionText: string;
@@ -15,6 +17,8 @@ export type AdminQuestionFormState = {
 
 export type AdminQuestionUploadRow = {
   section?: string;
+  domain?: string;
+  skill?: string;
   module?: number | string;
   questionType?: string;
   questionText?: string;
@@ -37,6 +41,8 @@ export type AdminQuestionUploadRow = {
 export type PreparedQuestionPayload = {
   testId: string;
   section: string;
+  domain?: string;
+  skill?: string;
   module: number;
   questionType: string;
   questionText: string;

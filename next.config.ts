@@ -36,7 +36,7 @@ export default withSentryConfig(nextConfig, {
   // This can increase your server load as well as your hosting bill.
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
-  tunnelRoute: "/monitoring",
+  // tunnelRoute: "/monitoring", // Đã tắt để fix lỗi giật lag và lỗi proxy ECONNRESET trên localhost
 
   webpack: {
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)

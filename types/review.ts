@@ -4,6 +4,7 @@ export type ReviewQuestion = {
   module?: number;
   subject?: string;
   domain?: string;
+  skill?: string;
   questionType?: "multiple_choice" | "spr";
   questionText?: string;
   correctAnswer?: string;

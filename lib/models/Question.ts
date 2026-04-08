@@ -11,6 +11,8 @@
     export interface IQuestion extends Document {
         testId: mongoose.Types.ObjectId;    // Mã mà câu này thuộc về
         section: string;                    
+        domain?: string;
+        skill?: string;
         module: number;                     // 1 2   - module 1 or 2
         questionType: "multiple_choice" | "spr"; // THÊM MỚI: Định dạng câu hỏi là Trắc nghiệm hay Tự luận
         questionText: string;               // Câu hỏi (Main purpose, ...)
@@ -28,6 +30,8 @@
         {
             testId: { type: Schema.Types.ObjectId, ref: "Test", required: true, index: true },
             section: { type: String, required: true },
+            domain: { type: String, required: false },
+            skill: { type: String, required: false },
             module: { type: Number, required: true },
             questionType: { type: String, enum: ["multiple_choice", "spr"], default: "multiple_choice" }, // THÊM MỚI
             questionText: { type: String, required: true },

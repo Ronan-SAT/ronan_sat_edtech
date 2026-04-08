@@ -13,9 +13,11 @@ import {
   getReviewStats,
   getSectionalColors,
   getSectionalIcon,
+  getSkillPerformance,
   groupFullLengthAnswers,
   toTitleCase,
 } from "@/components/review/reviewPage.utils";
+import { SkillPerformanceCard } from "@/components/review/SkillPerformanceCard";
 
 type ReviewReportProps = {
   testType: "full" | "sectional";
@@ -228,9 +230,12 @@ export function ReviewReport({ testType, activeTest, onSelectAnswer }: ReviewRep
     );
   }
 
+  const skillData = getSkillPerformance(activeTest.answers || []);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <ReviewSummaryCard testType={testType} activeTest={activeTest} />
+      {skillData.length > 0 && <SkillPerformanceCard data={skillData} />}
       {testType === "full" ? (
         <FullLengthReport activeTest={activeTest} onSelectAnswer={onSelectAnswer} />
       ) : (
