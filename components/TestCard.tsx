@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
-import { CircleHelp, Clock3, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import type { TestListItem, UserResultSummary } from "@/types/testLibrary";
@@ -139,7 +138,7 @@ export default function TestCard({
   return (
     <div className="workbook-panel flex h-full flex-col overflow-hidden">
       <div className="border-b-4 border-ink-fg bg-paper-bg px-4 py-4">
-        <div className="flex min-h-[6.6rem] items-start justify-between gap-4">
+        <div className="flex min-h-[6.6rem] items-start gap-4">
           <div className="flex min-h-[5rem] min-w-0 flex-1 flex-col">
             <div className={`workbook-sticker w-fit ${stickerClassName}`}>
               {isSectional ? sectionalStickerLabel : "Full Practice"}
@@ -155,20 +154,13 @@ export default function TestCard({
               {test.title}
             </h3>
           </div>
-
-          {!isSectional && latestFullLengthResult ? (
-            <div className="rounded-2xl border-2 border-ink-fg bg-surface-white px-3 py-2.5 text-center text-ink-fg brutal-shadow-sm">
-              <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em]">Last Score</p>
-              <p className="mt-1 font-display text-xl font-black md:text-2xl">{getFullLengthScore(latestFullLengthResult)}</p>
-            </div>
-          ) : null}
         </div>
       </div>
 
       <div className="flex-1 p-4">
         <div className="grid grid-cols-2 gap-2.5">
-          <StatCard icon={<Clock3 className="h-4 w-4" />} label="Minutes" value={String(totalTime)} />
-          <StatCard icon={<CircleHelp className="h-4 w-4" />} label="Questions" value={String(totalQuestions)} />
+          <StatCard label="Minutes" value={String(totalTime)} />
+          <StatCard label="Questions" value={String(totalQuestions)} />
         </div>
       </div>
 
@@ -206,7 +198,7 @@ export default function TestCard({
                 href={`/review?mode=full&resultId=${latestFullLengthResult._id}`}
                 className="workbook-button workbook-button-secondary justify-center"
               >
-                Review
+                {getFullLengthScore(latestFullLengthResult)} / 1600
               </Link>
               <Link
                 href={`/test/${test._id}?mode=full`}
@@ -240,21 +232,16 @@ export default function TestCard({
 }
 
 function StatCard({
-  icon,
   label,
   value,
 }: {
-  icon: ReactNode;
   label: string;
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border-2 border-ink-fg bg-surface-white p-3 brutal-shadow-sm">
-      <div className="flex items-center gap-1 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-ink-fg sm:text-[0.65rem]">
-        <span className="shrink-0">{icon}</span>
-        <span className="min-w-0 truncate">{label}</span>
-      </div>
-      <div className="mt-2.5 font-display text-[2rem] font-black leading-none tracking-tight text-ink-fg">{value}</div>
+    <div className="rounded-2xl border-2 border-ink-fg bg-surface-white p-2.5 brutal-shadow-sm">
+      <div className="text-[0.58rem] font-bold uppercase tracking-[0.08em] text-ink-fg sm:text-[0.62rem]">{label}</div>
+      <div className="mt-2 font-display text-[1.8rem] font-black leading-none tracking-tight text-ink-fg">{value}</div>
     </div>
   );
 }
@@ -271,7 +258,6 @@ function ModuleAction({
     <section className="rounded-2xl border-2 border-ink-fg bg-surface-white p-3.5 brutal-shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="text-xs font-bold uppercase tracking-[0.18em] text-ink-fg">{title}</span>
-        {result ? <span className="workbook-sticker bg-primary">{getSectionalScore(result)} / {scoreDenominator}</span> : null}
       </div>
 
       {!available ? (
@@ -285,7 +271,7 @@ function ModuleAction({
       ) : result?._id && reviewHref ? (
         <div className="grid grid-cols-[minmax(0,1fr)_68px] gap-3">
           <Link href={reviewHref} className="workbook-button workbook-button-secondary justify-center">
-            Review
+            {getSectionalScore(result)} / {scoreDenominator}
           </Link>
           <Link href={startHref} className="workbook-button workbook-button-secondary justify-center px-0" aria-label={`Retake ${title.toLowerCase()}`}>
             <RotateCcw className="h-4 w-4" />

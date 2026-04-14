@@ -9,8 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx seed.ts",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
-    "prepare": "husky || true"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.1",
@@ -60,7 +59,6 @@
     "dotenv": "^17.4.2",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.3",
-    "husky": "^9.1.7",
     "tailwindcss": "^4.2.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
