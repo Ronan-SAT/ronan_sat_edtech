@@ -280,45 +280,7 @@ bun run build
 bun run start
 ```
 
-### Cloudflare Workers preview
-
-```bash
-bun run preview
-```
-
-This builds the app with `@opennextjs/cloudflare` and runs it in the local Workers runtime.
-
-### Cloudflare Workers deploy
-
-Preferred explicit deploy command:
-
-```bash
-bun run deploy
-```
-
-Direct Wrangler deploy is also supported:
-
-```bash
-npx wrangler deploy
-```
-
-The repo now includes `wrangler.jsonc` and `open-next.config.ts`, and uses `wrangler@4.82.2` plus `@opennextjs/cloudflare@1.19.1`.
-
-### GitHub Actions deploy
-
-The repo now includes `.github/workflows/deploy-vercel.yml` for GitHub-hosted CI/CD deployments to Vercel.
-
-For this workflow to work, add these repository secrets in GitHub:
-
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
-
-The workflow runs on pushes to `main` and on manual dispatch. It installs dependencies, restores the Next.js build cache, runs `bun run lint`, pulls the linked Vercel project settings, and deploys production with the Vercel CLI.
-
-App runtime environment variables such as `MONGODB_URI`, `NEXTAUTH_SECRET`, and provider credentials should be configured in the Vercel project itself, not in GitHub Actions.
-
-Before deploying, make sure the Worker environment has the same required secrets as your app build, especially:
+Before deploying, make sure the Vercel project environment has the same required secrets as your app build, especially:
 
 - `MONGODB_URI`
 - `NEXTAUTH_SECRET`
@@ -329,7 +291,7 @@ Before deploying, make sure the Worker environment has the same required secrets
 - `GEMINI_API_KEY`
 - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
 
-For production auth callbacks, set the deployed site URL as `NEXTAUTH_URL` in Cloudflare too.
+For production auth callbacks, set the deployed site URL as `NEXTAUTH_URL` in Vercel too.
 
 ### Lint
 
@@ -388,9 +350,6 @@ After configuring the environment and running `bun run dev`, verify in this orde
 | `bun run dev` | Start the local dev server |
 | `bun run build` | Build for production |
 | `bun run start` | Start the production build |
-| `bun run preview` | Build and preview in the Cloudflare Workers runtime |
-| `bun run deploy` | Build and deploy to Cloudflare Workers |
-| `bun run cf-typegen` | Generate Cloudflare binding types |
 | `bun run lint` | Run ESLint |
 | `bun run seed` | Seed sample MongoDB data |
 | `bun run changelog` | Generate/update changelog |
@@ -411,8 +370,6 @@ After configuring the environment and running `bun run dev`, verify in this orde
 | `lib/mongodb.ts` | MongoDB connection |
 | `lib/email.ts` | Gmail SMTP email sending |
 | `next.config.ts` | Next.js config with Sentry and image settings |
-| `open-next.config.ts` | OpenNext adapter config for Cloudflare Workers |
-| `wrangler.jsonc` | Wrangler deploy config for Cloudflare Workers |
 | `seed.ts` | Basic sample data seed |
 | `parse_and_seed.ts` | Larger sample import script |
 | `question_bank/` | Question content/source data |
