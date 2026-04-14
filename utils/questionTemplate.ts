@@ -113,6 +113,10 @@ function getTopBannerPath(stage: ActiveStage): string {
   return `/pdf-assets/banners/banner-${stage.sectionNumber}-${stage.module}.svg`;
 }
 
+function getMathReferenceAssetPath(): string {
+  return "/pdf-assets/math-reference.svg";
+}
+
 const COLUMN_LIMITS: Record<string, number> = {
   [VERBAL_SECTION]: 18,
   [MATH_SECTION]: 18,
@@ -138,7 +142,20 @@ function parseText(text: string | null | undefined): string {
     },
   );
 
-  return marked.parse(parsedMath) as string;
+  const parsedHtml = marked.parse(parsedMath) as string;
+
+  return parsedHtml.replace(
+    /<p>\s*(<span class="katex-display">[\s\S]*?<\/span>)\s*<\/p>/g,
+    '<div class="display-math-block">$1</div>',
+  );
+}
+
+function renderInlineMath(mathText: string): string {
+  return katex.renderToString(mathText, {
+    displayMode: false,
+    throwOnError: false,
+    output: "html",
+  });
 }
 
 function escapeHtml(value: string): string {
@@ -453,7 +470,7 @@ function buildAnswerKeyPage(testTitle: string, stages: ActiveStage[]): string {
       <div class="answer-key-grid">${sectionHtml}</div>
       <div class="answer-key-footer">
         <div>${escapeHtml(testTitle)}</div>
-        <div>PDF version from learn.ronansat.com</div>
+        <div>Visit learn.ronansat.com for the digital testing room.</div>
       </div>
     </section>
   `;
@@ -699,120 +716,9 @@ function buildVerbalIntroPage(
   `;
 }
 
-function buildMathReferenceSvg(): string {
+function buildMathReferenceFigure(): string {
   return `
-    <svg class="math-reference-svg" viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <g stroke="#111111" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="58" cy="70" r="36" />
-        <circle cx="58" cy="70" r="3.5" fill="#111111" />
-        <line x1="58" y1="70" x2="95" y2="70" />
-
-        <rect x="150" y="44" width="72" height="48" />
-
-        <polygon points="288,94 324,34 360,94" />
-        <line x1="324" y1="34" x2="324" y2="94" stroke-dasharray="5 5" />
-        <path d="M324 80 H338 V94" />
-
-        <polygon points="430,94 430,34 494,94" />
-        <path d="M430 80 H444 V94" />
-
-        <polygon points="574,90 686,90 686,32" />
-        <line x1="574" y1="90" x2="686" y2="32" />
-        <path d="M672 76 H686 V90" />
-
-        <polygon points="694,90 694,18 756,90" />
-        <path d="M694 76 H708 V90" />
-
-        <polygon points="26,224 118,224 118,176 140,160 140,208 118,224" />
-        <line x1="118" y1="176" x2="140" y2="160" />
-        <line x1="118" y1="224" x2="140" y2="208" />
-
-        <ellipse cx="208" cy="193" rx="34" ry="11" />
-        <line x1="174" y1="193" x2="174" y2="238" />
-        <line x1="242" y1="193" x2="242" y2="238" />
-        <ellipse cx="208" cy="238" rx="34" ry="11" />
-        <circle cx="208" cy="193" r="3.5" fill="#111111" />
-        <line x1="208" y1="193" x2="238" y2="193" />
-
-        <circle cx="358" cy="212" r="40" />
-        <ellipse cx="358" cy="212" rx="30" ry="9" stroke-dasharray="7 6" />
-        <circle cx="358" cy="212" r="3.5" fill="#111111" />
-        <line x1="358" y1="212" x2="396" y2="212" />
-
-        <ellipse cx="514" cy="226" rx="32" ry="10" />
-        <path d="M482 226 Q514 146 546 226" />
-        <line x1="514" y1="226" x2="514" y2="146" />
-        <path d="M514 212 H526 V226" />
-        <path d="M497 218 Q514 204 531 218" stroke-dasharray="7 6" />
-
-        <polygon points="612,226 708,226 676,186 612,186" opacity="0" />
-        <polygon points="610,226 670,150 734,206 646,226" />
-        <line x1="646" y1="226" x2="646" y2="150" />
-        <line x1="610" y1="226" x2="704" y2="226" stroke-dasharray="7 6" />
-        <line x1="646" y1="226" x2="704" y2="226" />
-        <path d="M646 212 H658 V226" />
-        <line x1="610" y1="226" x2="670" y2="150" stroke-dasharray="7 6" />
-      </g>
-
-      <g fill="#111111" font-family="Georgia, 'Times New Roman', serif">
-        <text x="82" y="56" font-size="20" font-style="italic">r</text>
-
-        <text x="185" y="32" font-size="20" font-style="italic">ℓ</text>
-        <text x="230" y="70" font-size="20" font-style="italic">w</text>
-
-        <text x="318" y="62" font-size="20" font-style="italic">h</text>
-        <text x="320" y="118" font-size="20" font-style="italic">b</text>
-
-        <text x="414" y="64" font-size="20" font-style="italic">b</text>
-        <text x="456" y="64" font-size="20" font-style="italic">c</text>
-        <text x="458" y="118" font-size="20" font-style="italic">a</text>
-
-        <text x="630" y="52" font-size="18">60°</text>
-        <text x="610" y="86" font-size="18">30°</text>
-        <text x="615" y="42" font-size="20" font-style="italic">2x</text>
-        <text x="690" y="68" font-size="20" font-style="italic">x</text>
-        <text x="624" y="120" font-size="20" font-style="italic">x√3</text>
-
-        <text x="710" y="56" font-size="18">45°</text>
-        <text x="752" y="86" font-size="18" text-anchor="end">45°</text>
-        <text x="678" y="70" font-size="20" font-style="italic">s</text>
-        <text x="714" y="70" font-size="20" font-style="italic">s√2</text>
-        <text x="724" y="118" font-size="20" font-style="italic">s</text>
-
-        <text x="98" y="194" font-size="20" font-style="italic">h</text>
-        <text x="120" y="232" font-size="20" font-style="italic">w</text>
-        <text x="80" y="262" font-size="20" font-style="italic">ℓ</text>
-
-        <text x="198" y="181" font-size="20" font-style="italic">r</text>
-        <text x="247" y="217" font-size="20" font-style="italic">h</text>
-
-        <text x="384" y="203" font-size="20" font-style="italic">r</text>
-
-        <text x="524" y="181" font-size="20" font-style="italic">h</text>
-        <text x="548" y="222" font-size="20" font-style="italic">r</text>
-
-        <text x="655" y="188" font-size="20" font-style="italic">h</text>
-        <text x="680" y="246" font-size="20" font-style="italic">w</text>
-        <text x="636" y="264" font-size="20" font-style="italic">ℓ</text>
-
-        <text x="16" y="136" font-size="24" font-style="italic">A = πr²</text>
-        <text x="24" y="172" font-size="24" font-style="italic">C = 2πr</text>
-
-        <text x="162" y="164" font-size="24" font-style="italic">A = ℓw</text>
-
-        <text x="286" y="164" font-size="24" font-style="italic">A = 1/2 bh</text>
-
-        <text x="412" y="164" font-size="24" font-style="italic">c² = a² + b²</text>
-
-        <text x="608" y="154" font-size="17">Special Right Triangles</text>
-
-        <text x="44" y="314" font-size="24" font-style="italic">V = ℓwh</text>
-        <text x="172" y="314" font-size="24" font-style="italic">V = πr²h</text>
-        <text x="298" y="314" font-size="24" font-style="italic">V = 4/3 πr³</text>
-        <text x="470" y="314" font-size="24" font-style="italic">V = 1/3 πr²h</text>
-        <text x="618" y="314" font-size="24" font-style="italic">V = 1/3 ℓwh</text>
-      </g>
-    </svg>
+    <img src="${getMathReferenceAssetPath()}" alt="Math reference figures and formulas" class="math-reference-svg" />
   `;
 }
 
@@ -835,13 +741,13 @@ function buildMathIntroPage(stage: ActiveStage, pageNumber: number): string {
             <li>All variables and expressions represent real numbers.</li>
             <li>Figures provided are drawn to scale.</li>
             <li>All figures lie in a plane.</li>
-            <li>The domain of a given function <em>f</em> is the set of all real numbers <em>x</em> for which <em>f</em>(<em>x</em>) is a real number.</li>
+            <li>The domain of a given function ${renderInlineMath("f")} is the set of all real numbers ${renderInlineMath("x")} for which ${renderInlineMath("f(x)")} is a real number.</li>
           </ul>
           <div class="directions-tag secondary-tag">REFERENCE</div>
-          ${buildMathReferenceSvg()}
-          <div class="math-reference-copy">The number of degrees of arc in a circle is 360.</div>
-          <div class="math-reference-copy">The number of radians of arc in a circle is 2π.</div>
-          <div class="math-reference-copy">The sum of the measures in degrees of the angles of a triangle is 180.</div>
+          ${buildMathReferenceFigure()}
+          <div class="math-reference-copy">The number of degrees of arc in a circle is ${renderInlineMath("360")}.</div>
+          <div class="math-reference-copy">The number of radians of arc in a circle is ${renderInlineMath("2\\pi")}.</div>
+          <div class="math-reference-copy">The sum of the measures in degrees of the angles of a triangle is ${renderInlineMath("180")}.</div>
         </div>
         <div class="section-rule section-rule-bottom"></div>
       </div>
@@ -1432,8 +1338,8 @@ function buildStyles(): string {
 
     .directions-card p {
       margin-top: 0.12in;
-      font-size: 0.15in;
-      line-height: 1.36;
+      font-size: 0.138in;
+      line-height: 1.32;
     }
 
     .math-directions-card {
@@ -1448,15 +1354,15 @@ function buildStyles(): string {
     .math-notes-copy,
     .math-reference-copy {
       margin-top: 0.1in;
-      font-size: 0.145in;
-      line-height: 1.34;
+      font-size: 0.132in;
+      line-height: 1.28;
     }
 
     .math-note-list {
       margin: 0.08in 0 0;
       padding-left: 0.16in;
-      font-size: 0.145in;
-      line-height: 1.34;
+      font-size: 0.132in;
+      line-height: 1.28;
     }
 
     .math-note-list li {
@@ -1466,8 +1372,9 @@ function buildStyles(): string {
     .math-reference-svg {
       display: block;
       width: 100%;
+      max-width: 5.98in;
       height: auto;
-      margin-top: 0.12in;
+      margin: 0.12in auto 0;
     }
 
     .math-response-inner {
@@ -1478,8 +1385,8 @@ function buildStyles(): string {
       width: 5.82in;
       margin-left: 1.16in;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 0.148in;
-      line-height: 1.36;
+      font-size: 0.136in;
+      line-height: 1.3;
     }
 
     .math-response-copy p {
@@ -1576,6 +1483,15 @@ function buildStyles(): string {
 
     .question-card-body p:last-child {
       margin-bottom: 0;
+    }
+
+    .display-math-block {
+      margin: 0.12in 0 0.16in;
+      text-align: center;
+    }
+
+    .display-math-block:last-child {
+      margin-bottom: 0.04in;
     }
 
     .passage-kicker,
@@ -1842,7 +1758,7 @@ function buildStyles(): string {
 
     .katex-display {
       display: block;
-      margin: 0.1in 0 0.12in;
+      margin: 0;
       text-align: center;
     }
 
