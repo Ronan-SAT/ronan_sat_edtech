@@ -1,6 +1,7 @@
 export const TESTING_ROOM_THEME_STORAGE_KEY = "ronan-testing-room-theme";
 
 type TestingRoomThemePresetDefinition = {
+  isDark: boolean;
   label: string;
   cardTitle: string;
   description: string;
@@ -48,6 +49,7 @@ type TestingRoomThemePresetDefinition = {
   viewer: {
     rootClass: string;
     readingFontClass: string;
+    figureBackgroundColor: string;
     leftPanelClass: string;
     imageCardClass: string;
     passageClass: string;
@@ -143,6 +145,7 @@ type TestingRoomThemePresetDefinition = {
 
 export const TESTING_ROOM_THEME_PRESETS = {
   ronan: {
+    isDark: false,
     label: "RONAN SAT",
     cardTitle: "Ronan SAT testing room",
     description: "The chunky workbook classic, with highlighter pop and cozy grit.",
@@ -205,6 +208,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
       rootClass: "bg-surface-white",
       readingFontClass:
         "[font-family:Georgia,'Times_New_Roman',Times,serif]",
+      figureBackgroundColor: "#ffffff",
       leftPanelClass: "bg-surface-white md:border-r-4 md:border-ink-fg",
       imageCardClass: "rounded-2xl border-2 border-ink-fg brutal-shadow-sm",
       passageClass:
@@ -318,6 +322,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
     },
   },
   collegeboard: {
+    isDark: false,
     label: "College Board",
     cardTitle: "Bluebook-style testing room",
     description: "A cleaner, calmer room with cool tones and polite little borders.",
@@ -382,6 +387,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
       rootClass: "bg-white",
       readingFontClass:
         "[font-family:Georgia,'Times_New_Roman',Times,serif]",
+      figureBackgroundColor: "#ffffff",
       leftPanelClass: "bg-white md:border-r md:border-[#cfd3d7]",
       imageCardClass: "rounded-2xl border border-[#d2d6da] bg-white",
       passageClass:
@@ -505,6 +511,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
     },
   },
   bookerly: {
+    isDark: false,
     label: "Bookerly",
     cardTitle: "Warm reading room",
     description:
@@ -573,6 +580,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
       rootClass: "bg-[#f7efe1]",
       readingFontClass:
         "[font-family:Bookerly,'Iowan_Old_Style','Palatino_Linotype','URW_Palladio_L',Palatino,'Book_Antiqua',Georgia,serif] tracking-[0.002em]",
+      figureBackgroundColor: "#f5ede0",
       leftPanelClass: "bg-[#f5ede0] md:border-r-4 md:border-[#d4b893]",
       imageCardClass:
         "rounded-[1.75rem] border-2 border-[#c8ae8b] bg-[#fdf8f0] shadow-[3px_3px_0px_#e0c6a2]",
@@ -714,6 +722,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
     },
   },
   dracula: {
+    isDark: true,
     label: "DRACULA",
     cardTitle: "Dracula testing room",
     description: "A moody midnight chamber: dark panels, red glow, vampire focus.",
@@ -782,6 +791,7 @@ export const TESTING_ROOM_THEME_PRESETS = {
       rootClass: "bg-[#110d11]",
       readingFontClass:
         "[font-family:Georgia,'Times_New_Roman',Times,serif]",
+      figureBackgroundColor: "#140f13",
       leftPanelClass: "bg-[#140f13] md:border-r-4 md:border-[#4a1823]",
       imageCardClass:
         "rounded-2xl border-2 border-[#5b1b28] bg-[#1b1419] shadow-[3px_3px_0px_#300d16]",

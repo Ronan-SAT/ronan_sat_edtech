@@ -70,7 +70,8 @@ export default function QuestionViewer({
   index,
   leftWidth = 50,
 }: QuestionViewerProps) {
-  const viewerTheme = getTestingRoomThemePreset(theme).viewer;
+  const themePreset = getTestingRoomThemePreset(theme);
+  const viewerTheme = themePreset.viewer;
   const readingFontClass = viewerTheme.readingFontClass;
   const optionLabels = ["A", "B", "C", "D"];
   const [crossedOutByQuestion, setCrossedOutByQuestion] = useState<Record<string, string[]>>({});
@@ -180,6 +181,8 @@ export default function QuestionViewer({
                 className="mb-4 sm:mb-6"
                 titleClassName={`mb-2 text-center text-[14px] font-normal leading-[1.35] ${readingFontClass} text-ink-fg`}
                 contentClassName={readingFontClass}
+                figureBackgroundColor={viewerTheme.figureBackgroundColor}
+                isDarkTheme={themePreset.isDark}
               />
             ) : null}
 
@@ -226,6 +229,8 @@ export default function QuestionViewer({
                 className="mb-4"
                 titleClassName={`mb-2 text-center text-[14px] font-normal leading-[1.35] ${readingFontClass} text-ink-fg`}
                 contentClassName={readingFontClass}
+                figureBackgroundColor={viewerTheme.figureBackgroundColor}
+                isDarkTheme={themePreset.isDark}
               />
             ) : null}
 
