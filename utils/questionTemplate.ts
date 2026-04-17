@@ -128,6 +128,7 @@ const COLUMN_LIMITS: Record<string, number> = {
 const FRACTION_PATTERN = /\\frac/;
 const SUPERSCRIPT_PATTERN = /\^(\{[^}]+\}|\\[a-zA-Z]+|\S)/g;
 const NON_TALL_SUPERSCRIPT_PATTERN = /^(?:\{)?(?:\\circ|\\degree|\\deg|°)(?:\})?$/;
+const MATH_DELIMITER_PATTERN = /(?<!\\)(\$\$?)(.*?)(?<!\\)\1/gs;
 
 function groupConsecutiveDisplayMathBlocks(html: string): string {
   return html.replace(
@@ -191,7 +192,7 @@ function parseText(
     : text;
 
   const parsedMath = normalizedText.replace(
-    /(\$\$?)(.*?)\1/gs,
+    MATH_DELIMITER_PATTERN,
     (match, prefix, mathText) => {
       try {
         const isDisplayMath = prefix === "$$";
@@ -218,7 +219,7 @@ function parseText(
   const parsedHtml = marked.parse(parsedMath) as string;
 
   if (!options?.promoteStandaloneMath) {
-    return parsedHtml;
+    return parsedHtml.replace(/\\\$/g, "$");
   }
 
   return groupConsecutiveDisplayMathBlocks(
@@ -231,7 +232,7 @@ function parseText(
       /<p>\s*(<span class="katex">[\s\S]*?<\/span>)\s*<\/p>/g,
       '<div class="display-math-block"><span class="katex-display">$1</span></div>',
     ),
-  );
+  ).replace(/\\\$/g, "$");
 }
 
 function renderInlineMath(mathText: string): string {
@@ -1754,11 +1755,14 @@ function buildStyles(): string {
       text-align: center;
     }
 
-    .question-extra-wrap--figure svg {
-      max-width: 100%;
-      width: 100%;
+    .question-extra-wrap--figure svg,
+    .question-extra-wrap--figure img {
+      display: block;
+      width: auto;
+      max-width: 66.6667%;
       height: auto;
       max-height: 2.8in;
+      margin: 0 auto;
     }
 
     .question-extra-title {
@@ -1848,8 +1852,10 @@ function buildStyles(): string {
     }
 
     .question-card img {
-      max-width: 100%;
+      display: block;
+      max-width: 66.6667%;
       height: auto;
+      margin: 0.05in auto 0.1in;
     }
 
     .question-card blockquote {

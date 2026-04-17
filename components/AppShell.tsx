@@ -31,7 +31,7 @@ export default function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-paper-bg text-ink-fg">
       <Navbar />
-      <div className="min-h-screen pb-28 lg:pl-72 lg:pb-0">
+      <div className="min-h-screen pb-28 lg:pl-64 lg:pb-0">
         {children}
       </div>
     </div>

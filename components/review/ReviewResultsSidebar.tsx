@@ -26,7 +26,7 @@ export function ReviewResultsSidebar({
 }: ReviewResultsSidebarProps) {
   return (
     <aside className="lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[22rem] lg:shrink-0 lg:flex-col lg:border-r-4 lg:border-ink-fg lg:bg-surface-white">
-      <div className="border-b-4 border-ink-fg bg-paper-bg px-4 py-5">
+      <div className="border-b-4 border-ink-fg bg-paper-bg px-4 py-5 lg:pl-3 lg:pr-4">
         <div className="workbook-sticker bg-primary text-ink-fg">
           <LayoutGrid className="h-3.5 w-3.5" />
           Results Shelf
@@ -64,7 +64,7 @@ export function ReviewResultsSidebar({
         {refreshing ? <div className="mt-4 text-xs font-bold uppercase tracking-[0.16em] text-ink-fg/70">Syncing review...</div> : null}
       </div>
 
-      <div className="bg-dot-pattern flex-1 space-y-3 overflow-y-auto px-3 py-4">
+      <div className="bg-dot-pattern flex-1 space-y-3 overflow-y-auto px-3 py-4 lg:pl-2 lg:pr-3">
         {filteredResults.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-ink-fg bg-surface-white px-4 py-10 text-center text-sm leading-6 text-ink-fg">
             No results found for this category.

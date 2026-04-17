@@ -3,11 +3,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { API_PATHS } from "@/lib/apiPaths";
+import { parseDraftToCardFields } from "@/components/vocab/flashCardUtils";
 import {
   emptyVocabBoard,
   isVocabBoardEmpty,
   normalizeVocabBoard,
-  VOCAB_COLUMN_COLOR_KEYS,
+  DEFAULT_VOCAB_COLUMN_COLOR_KEYS,
   type VocabBoardState,
   type VocabColumnColorKey,
 } from "@/lib/vocabBoard";
@@ -23,10 +24,10 @@ export {
 type VocabBoardContextValue = {
   board: VocabBoardState;
   hydrated: boolean;
-  addVocabCard: (text: string, sourceQuestionId?: string, destination?: string) => boolean;
+  addVocabCard: (text: string, sourceQuestionId?: string, destination?: string) => string | null;
   createColumn: (title: string) => string | null;
   moveCard: (cardId: string, destination: string) => void;
-  updateCardText: (cardId: string, text: string) => void;
+  updateCard: (cardId: string, nextCard: { term: string; definition: string; audioUrl?: string }) => void;
   removeCard: (cardId: string) => void;
   updateColumnTitle: (columnId: string, title: string) => void;
   updateColumnColor: (columnId: string, colorKey: VocabColumnColorKey) => void;
@@ -161,36 +162,57 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       board,
       hydrated,
       addVocabCard: (text, sourceQuestionId, destination = "inbox") => {
-        const normalizedText = normalizeText(text);
-        if (!normalizedText) {
-          return false;
+        const parsedDraft = parseDraftToCardFields(text);
+        const normalizedTerm = normalizeText(parsedDraft.term);
+        const normalizedDefinition = normalizeText(parsedDraft.definition);
+        if (!normalizedTerm) {
+          return null;
         }
 
-        let added = false;
+        let addedCardId: string | null = null;
 
         setBoard((previous) => {
-          const duplicateId = findDuplicateCardId(previous, normalizedText);
+          const duplicateId = findDuplicateCardId(previous, normalizedTerm);
           if (duplicateId) {
-            return moveCardBetweenBuckets(previous, duplicateId, destination);
+            addedCardId = duplicateId;
+            const duplicateCard = previous.cards[duplicateId];
+            const nextBoard =
+              duplicateCard && !duplicateCard.definition && normalizedDefinition
+                ? {
+                    ...previous,
+                    cards: {
+                      ...previous.cards,
+                      [duplicateId]: {
+                        ...duplicateCard,
+                        definition: normalizedDefinition,
+                        audioUrl: duplicateCard.audioUrl,
+                      },
+                    },
+                  }
+                : previous;
+
+            return moveCardBetweenBuckets(nextBoard, duplicateId, destination);
           }
 
           const id = createUniqueId("vocab", idRef);
+          addedCardId = id;
           const nextBoard: VocabBoardState = {
             ...previous,
             cards: {
               ...previous.cards,
-              [id]: {
-                id,
-                text: normalizedText,
-                createdAt: new Date().toISOString(),
-                sourceQuestionId,
-              },
+                [id]: {
+                  id,
+                  term: normalizedTerm,
+                  definition: normalizedDefinition,
+                  audioUrl: undefined,
+                  createdAt: new Date().toISOString(),
+                  sourceQuestionId,
+                },
             },
             inboxIds: previous.inboxIds,
             columns: previous.columns,
           };
 
-          added = true;
           return moveCardBetweenBuckets(
             {
               ...nextBoard,
@@ -201,7 +223,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
           );
         });
 
-        return added;
+        return addedCardId;
       },
       createColumn: (title) => {
         const normalizedTitle = title.trim();
@@ -218,7 +240,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
               id: columnId,
               title: normalizedTitle,
               cardIds: [],
-              colorKey: VOCAB_COLUMN_COLOR_KEYS[previous.columns.length % VOCAB_COLUMN_COLOR_KEYS.length],
+              colorKey: DEFAULT_VOCAB_COLUMN_COLOR_KEYS[previous.columns.length % DEFAULT_VOCAB_COLUMN_COLOR_KEYS.length],
             },
           ],
         }));
@@ -227,9 +249,11 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       moveCard: (cardId, destination) => {
         setBoard((previous) => moveCardBetweenBuckets(previous, cardId, destination));
       },
-      updateCardText: (cardId, text) => {
-        const normalizedText = normalizeText(text);
-        if (!normalizedText) {
+      updateCard: (cardId, nextCard) => {
+        const normalizedTerm = normalizeText(nextCard.term);
+        const normalizedDefinition = normalizeText(nextCard.definition);
+        const normalizedAudioUrl = nextCard.audioUrl?.trim() || undefined;
+        if (!normalizedTerm) {
           return;
         }
 
@@ -243,12 +267,14 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
             ...previous,
             cards: {
               ...previous.cards,
-              [cardId]: {
-                ...card,
-                text: normalizedText,
+                [cardId]: {
+                  ...card,
+                  term: normalizedTerm,
+                  definition: normalizedDefinition,
+                  audioUrl: normalizedAudioUrl ?? card.audioUrl,
+                },
               },
-            },
-          };
+            };
         });
       },
       removeCard: (cardId) => {
@@ -379,7 +405,7 @@ function moveCardBetweenBuckets(board: VocabBoardState, cardId: string, destinat
 }
 
 function findDuplicateCardId(board: VocabBoardState, normalizedText: string) {
-  return Object.values(board.cards).find((card) => normalizeText(card.text).toLowerCase() === normalizedText.toLowerCase())?.id;
+  return Object.values(board.cards).find((card) => normalizeText(card.term).toLowerCase() === normalizedText.toLowerCase())?.id;
 }
 
 function normalizeText(text: string) {

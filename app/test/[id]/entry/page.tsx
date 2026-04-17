@@ -99,7 +99,7 @@ export default async function TestEntryPage({ params, searchParams }: PageProps)
   const mode = resolvedSearchParams.mode === "sectional" ? "sectional" : "full";
   const sectionName = normalizeSectionName(resolvedSearchParams.section);
   const requestedModule = Number.parseInt(resolvedSearchParams.module ?? "", 10);
-  const module = Number.isInteger(requestedModule) && requestedModule > 0 ? requestedModule : null;
+  const selectedModuleNumber = Number.isInteger(requestedModule) && requestedModule > 0 ? requestedModule : null;
 
   let test;
 
@@ -115,7 +115,7 @@ export default async function TestEntryPage({ params, searchParams }: PageProps)
     notFound();
   }
 
-  const selectedModule = module ? availableModules.find((item) => item.module === module) ?? null : null;
+  const selectedModule = selectedModuleNumber ? availableModules.find((item) => item.module === selectedModuleNumber) ?? null : null;
   const summaryModules = selectedModule ? [selectedModule] : mode === "sectional" ? availableModules : getModuleSpecs(test.questionCounts as TestQuestionCounts | undefined);
   const totalMinutes = summaryModules.reduce((sum, item) => sum + item.minutes, 0);
   const totalQuestions = summaryModules.reduce((sum, item) => sum + item.questionCount, 0);

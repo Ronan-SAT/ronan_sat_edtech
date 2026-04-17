@@ -1,18 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { createElement, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
+import { API_PATHS } from "@/lib/apiPaths";
+import toast from "react-hot-toast";
 import {
   useVocabBoard,
   type VocabCard,
   type VocabColumn,
   type VocabColumnColorKey,
 } from "@/components/vocab/VocabBoardProvider";
-import { parseFlashCardText } from "@/components/vocab/flashCardUtils";
+import { parseDraftToCardFields, parseFlashCard } from "@/components/vocab/flashCardUtils";
 import type { DropIndicatorState, FlashCardModalState } from "@/components/vocab/vocabPage.types";
+
+type DictionaryLookupState = {
+  status: "idle" | "loading" | "success" | "error";
+  message?: string;
+};
 
 function isVocabCard(card: VocabCard | undefined): card is VocabCard {
   return Boolean(card);
+}
+
+function shuffleCards(cards: VocabCard[]) {
+  const shuffled = [...cards];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
 }
 
 export function useVocabPageController() {
@@ -23,7 +41,7 @@ export function useVocabPageController() {
     createColumn,
     moveCard,
     removeCard,
-    updateCardText,
+    updateCard,
     updateColumnTitle,
     updateColumnColor,
     removeColumn,
@@ -38,13 +56,16 @@ export function useVocabPageController() {
   const [draftByBucket, setDraftByBucket] = useState<Record<string, string>>({});
   const [openComposerByBucket, setOpenComposerByBucket] = useState<Record<string, boolean>>({});
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  const [editingCardText, setEditingCardText] = useState("");
+  const [editingCardTerm, setEditingCardTerm] = useState("");
+  const [editingCardDefinition, setEditingCardDefinition] = useState("");
+  const [editingCardAudioUrl, setEditingCardAudioUrl] = useState<string | undefined>(undefined);
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingColumnTitle, setEditingColumnTitle] = useState("");
   const [openMenuColumnId, setOpenMenuColumnId] = useState<string | null>(null);
   const [flashCardModal, setFlashCardModal] = useState<FlashCardModalState | null>(null);
   const [flashCardIndex, setFlashCardIndex] = useState(0);
   const [isFlashCardAnswerVisible, setIsFlashCardAnswerVisible] = useState(false);
+  const [dictionaryLookupByCardId, setDictionaryLookupByCardId] = useState<Record<string, DictionaryLookupState>>({});
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const dragPreviewRef = useRef<HTMLElement | null>(null);
@@ -191,17 +212,26 @@ export function useVocabPageController() {
 
   const handleAddCard = (destination: string) => {
     const text = draftByBucket[destination] ?? "";
-    const added = addVocabCard(text, undefined, destination);
-    if (!added) {
+    const parsedDraft = parseDraftToCardFields(text);
+    const normalizedTerm = parsedDraft.term.trim();
+    const normalizedDefinition = parsedDraft.definition.trim();
+    const cardId = addVocabCard(text, undefined, destination);
+    if (!cardId) {
       return;
     }
 
     resetBucketComposer(destination);
+
+    if (normalizedTerm) {
+      void fetchDictionaryDataForCard(cardId, normalizedTerm, normalizedDefinition);
+    }
   };
 
   const startEditCard = (card: VocabCard) => {
     setEditingCardId(card.id);
-    setEditingCardText(card.text);
+    setEditingCardTerm(card.term);
+    setEditingCardDefinition(card.definition);
+    setEditingCardAudioUrl(card.audioUrl);
   };
 
   const saveCardEdit = () => {
@@ -209,14 +239,120 @@ export function useVocabPageController() {
       return;
     }
 
-    updateCardText(editingCardId, editingCardText);
+    updateCard(editingCardId, {
+      term: editingCardTerm,
+      definition: editingCardDefinition,
+      audioUrl: editingCardAudioUrl,
+    });
     setEditingCardId(null);
-    setEditingCardText("");
+    setEditingCardTerm("");
+    setEditingCardDefinition("");
+    setEditingCardAudioUrl(undefined);
   };
 
   const cancelCardEdit = () => {
     setEditingCardId(null);
-    setEditingCardText("");
+    setEditingCardTerm("");
+    setEditingCardDefinition("");
+    setEditingCardAudioUrl(undefined);
+  };
+
+  const fetchDefinitionForCard = async (card: VocabCard) => {
+    const activeTerm = editingCardId === card.id ? editingCardTerm : card.term;
+    const normalizedTerm = activeTerm.trim();
+    if (!normalizedTerm) {
+      setDictionaryLookupByCardId((previous) => ({
+        ...previous,
+        [card.id]: {
+          status: "error",
+          message: "Add a word first.",
+        },
+      }));
+      return;
+    }
+
+    await fetchDictionaryDataForCard(card.id, normalizedTerm, editingCardId === card.id ? editingCardDefinition.trim() : card.definition);
+  };
+
+  const fetchDictionaryDataForCard = async (cardId: string, normalizedTerm: string, existingDefinition = "") => {
+    const currentCard = board.cards[cardId];
+    const preservedDefinition = existingDefinition.trim() || currentCard?.definition || "";
+
+    setDictionaryLookupByCardId((previous) => ({
+      ...previous,
+      [cardId]: {
+        status: "loading",
+        message: "Fetching definition...",
+      },
+    }));
+    const loadingToastId = toast.loading(`Fetching definition for ${normalizedTerm}...`);
+
+    try {
+      const response = await fetch(`${API_PATHS.VOCAB_DICTIONARY}?term=${encodeURIComponent(normalizedTerm)}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const payload = (await response.json()) as { definition?: string; audioUrl?: string; error?: string };
+      if (!response.ok || (!payload.definition && !payload.audioUrl)) {
+        throw new Error(payload.error || "Definition not found");
+      }
+
+      const nextDefinition = preservedDefinition || payload.definition || "";
+
+      if (editingCardId === cardId) {
+        setEditingCardDefinition(nextDefinition);
+        setEditingCardAudioUrl(payload.audioUrl);
+      } else {
+        updateCard(cardId, {
+          term: normalizedTerm,
+          definition: nextDefinition,
+          audioUrl: payload.audioUrl,
+        });
+      }
+
+      setDictionaryLookupByCardId((previous) => ({
+        ...previous,
+        [cardId]: {
+          status: "success",
+          message: payload.definition && !preservedDefinition ? "Definition added." : "Audio added.",
+        },
+      }));
+      if (payload.definition && !preservedDefinition) {
+        toast.success(
+          createElement(
+            "div",
+            { className: "min-w-0" },
+            createElement("div", { className: "text-[13px] font-black" }, `Definition added for ${normalizedTerm}.`),
+            createElement(
+              "div",
+              {
+                className: "mt-1 overflow-hidden whitespace-pre-wrap break-words text-[12px] font-medium leading-5 text-ink-fg/80",
+                style: {
+                  display: "-webkit-box",
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: "vertical",
+                },
+              },
+              payload.definition,
+            ),
+          ),
+          { id: loadingToastId, duration: 3600 },
+        );
+      } else {
+        toast.success(`Audio added for ${normalizedTerm}.`, { id: loadingToastId });
+      }
+    } catch (error) {
+      setDictionaryLookupByCardId((previous) => ({
+        ...previous,
+        [cardId]: {
+          status: "error",
+          message: error instanceof Error ? error.message : "Definition not found",
+        },
+      }));
+      const errorMessage = error instanceof Error ? error.message : "Definition not found";
+      toast.error(errorMessage, { id: loadingToastId });
+    }
   };
 
   const startEditColumn = (column: VocabColumn) => {
@@ -244,15 +380,27 @@ export function useVocabPageController() {
     setOpenMenuColumnId((current) => (current === columnId ? null : columnId));
   };
 
-  const openFlashCards = (columnId: string, title: string, cards: VocabCard[]) => {
-    if (cards.length === 0) {
+  const openCollectionPractice = (collectionId: string) => {
+    const selectedCards =
+      collectionId === "inbox"
+        ? inboxCards
+        : board.columns.find((column) => column.id === collectionId)?.cardIds.map((cardId) => board.cards[cardId]).filter(isVocabCard) ?? [];
+
+    if (selectedCards.length === 0) {
       return;
     }
 
-    setFlashCardModal({ columnId, title, cards });
+    const shuffledCards = shuffleCards(selectedCards);
+
+    const title = collectionId === "inbox" ? "Practice Inbox" : `Practice ${board.columns.find((column) => column.id === collectionId)?.title ?? "Collection"}`;
+
+    setFlashCardModal({
+      columnId: collectionId,
+      title,
+      cards: shuffledCards,
+    });
     setFlashCardIndex(0);
     setIsFlashCardAnswerVisible(false);
-    setOpenMenuColumnId(null);
   };
 
   const showPreviousFlashCard = () => {
@@ -366,7 +514,7 @@ export function useVocabPageController() {
   };
 
   const activeFlashCard = flashCardModal?.cards[flashCardIndex] ?? null;
-  const activeFlashCardContent = activeFlashCard ? parseFlashCardText(activeFlashCard.text) : null;
+  const activeFlashCardContent = activeFlashCard ? parseFlashCard(activeFlashCard) : null;
 
   return {
     board,
@@ -380,19 +528,22 @@ export function useVocabPageController() {
     draftByBucket,
     openComposerByBucket,
     editingCardId,
-    editingCardText,
+    editingCardTerm,
+    editingCardDefinition,
     editingColumnId,
     editingColumnTitle,
     openMenuColumnId,
     flashCardModal,
     flashCardIndex,
     isFlashCardAnswerVisible,
+    dictionaryLookupByCardId,
     activeFlashCard,
     activeFlashCardContent,
     menuRef,
     boardScrollRef,
     setDraggingCardId,
-    setEditingCardText,
+    setEditingCardTerm,
+    setEditingCardDefinition,
     setEditingColumnTitle,
     setIsAddingColumn,
     setNewColumnTitle,
@@ -405,11 +556,12 @@ export function useVocabPageController() {
     startEditCard,
     saveCardEdit,
     cancelCardEdit,
+    fetchDefinitionForCard,
     startEditColumn,
     saveColumnEdit,
     cancelColumnEdit,
     toggleColumnMenu,
-    openFlashCards,
+    openCollectionPractice,
     showPreviousFlashCard,
     showNextFlashCard,
     setIsFlashCardAnswerVisible,

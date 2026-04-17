@@ -1,15 +1,16 @@
-import { CheckCircle2 } from "lucide-react";
+import { BookOpenCheck, CheckCircle2 } from "lucide-react";
 
 import type { VocabCard } from "@/components/vocab/VocabBoardProvider";
 
 type EditableVocabCardProps = {
   card: VocabCard;
   isEditing: boolean;
-  editingText: string;
-  onEditingTextChange: (value: string) => void;
+  dictionaryStatus?: {
+    status: "idle" | "loading" | "success" | "error";
+    message?: string;
+  };
   onEdit: () => void;
-  onSave: () => void;
-  onCancel: () => void;
+  onFetchDefinition: () => void;
   onRemove: () => void;
   onDragStart: (cardId: string) => void;
 };
@@ -17,11 +18,9 @@ type EditableVocabCardProps = {
 export function EditableVocabCard({
   card,
   isEditing,
-  editingText,
-  onEditingTextChange,
+  dictionaryStatus,
   onEdit,
-  onSave,
-  onCancel,
+  onFetchDefinition,
   onRemove,
   onDragStart,
 }: EditableVocabCardProps) {
@@ -29,33 +28,27 @@ export function EditableVocabCard({
     <article
       draggable={!isEditing}
       onDragStart={() => onDragStart(card.id)}
-      className="group rounded-[16px] border-2 border-ink-fg bg-surface-white px-3.5 py-3 text-ink-fg brutal-shadow-sm transition workbook-press"
+      className="group rounded-[16px] border-2 border-ink-fg bg-surface-white px-3 py-2.5 text-ink-fg brutal-shadow-sm transition workbook-press"
     >
-      <div className="flex items-start gap-2.5">
-        <div className="min-w-0 flex-1">
-          {isEditing ? (
-            <textarea
-              autoFocus
-              value={editingText}
-              onChange={(event) => onEditingTextChange(event.target.value)}
-              onBlur={onSave}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  onSave();
-                }
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex flex-1 items-center gap-1.5">
+          <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
+          <div className="flex items-center gap-1.5">
+            <div className="truncate text-[16px] font-black leading-6 tracking-[-0.02em] text-ink-fg">{card.term}</div>
+          </div>
+          </button>
+        </div>
 
-                if (event.key === "Escape") {
-                  onCancel();
-                }
-              }}
-              className="min-h-[84px] w-full resize-none rounded-[12px] border-2 border-ink-fg bg-white px-3 py-2 text-[15px] leading-6 tracking-[-0.01em] text-ink-fg outline-none"
-            />
-          ) : (
-            <button type="button" onClick={onEdit} className="block w-full text-left text-[15px] leading-6 tracking-[-0.01em] text-ink-fg">
-              {card.text}
-            </button>
-          )}
+        <div className="flex items-center gap-1.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+          <button
+            type="button"
+            onClick={onFetchDefinition}
+            disabled={dictionaryStatus?.status === "loading"}
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink-fg bg-accent-1 text-ink-fg transition workbook-press disabled:cursor-not-allowed disabled:opacity-60"
+            title="Fetch definition"
+          >
+            <BookOpenCheck className="h-4.5 w-4.5" />
+          </button>
         </div>
 
         {!isEditing ? (
@@ -63,12 +56,18 @@ export function EditableVocabCard({
             type="button"
             onClick={onRemove}
             title="Mark as complete"
-            className="rounded-full border-2 border-ink-fg bg-paper-bg p-0.5 text-ink-fg opacity-0 transition group-hover:opacity-100"
+            className="rounded-full border-2 border-ink-fg bg-paper-bg p-0.5 text-ink-fg"
           >
-            <CheckCircle2 className="h-4.5 w-4.5" />
+            <CheckCircle2 className="h-5.5 w-5.5" />
           </button>
         ) : null}
       </div>
+
+      <button type="button" onClick={onEdit} className="-mt-0.5 block w-full text-left">
+        <div className={`truncate text-[12px] leading-4 ${card.definition ? "text-ink-fg/65" : "italic text-ink-fg/40"}`}>
+          {card.definition || "No definition yet"}
+        </div>
+      </button>
     </article>
   );
 }

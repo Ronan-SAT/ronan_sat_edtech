@@ -1,9 +1,9 @@
-import { Inbox } from "lucide-react";
+import { LibraryBig, Star } from "lucide-react";
 
 import { type VocabCard } from "@/components/vocab/VocabBoardProvider";
 import { AddCardComposer } from "@/components/vocab/AddCardComposer";
 import { EditableVocabCard } from "@/components/vocab/EditableVocabCard";
-import { BoardColumnShell, BoardEmptyState, ColumnActionButton, ColumnHeader } from "@/components/vocab/VocabBoardPrimitives";
+import { BoardColumnShell, BoardEmptyState, ColumnHeader } from "@/components/vocab/VocabBoardPrimitives";
 
 type VocabInboxColumnProps = {
   hydrated: boolean;
@@ -11,19 +11,17 @@ type VocabInboxColumnProps = {
   isComposerOpen: boolean;
   draftValue: string;
   editingCardId: string | null;
-  editingCardText: string;
+  dictionaryLookupByCardId: Record<string, { status: "idle" | "loading" | "success" | "error"; message?: string }>;
   onDraftChange: (value: string) => void;
   onOpenComposer: () => void;
   onCloseComposer: () => void;
   onAddCard: () => void;
   onEditCard: (card: VocabCard) => void;
-  onEditingCardTextChange: (value: string) => void;
-  onSaveCardEdit: () => void;
-  onCancelCardEdit: () => void;
+  onFetchDefinition: (card: VocabCard) => void;
   onRemoveCard: (cardId: string) => void;
   onCardDragStart: (cardId: string) => void;
   onDropCard: () => void;
-  onOpenFlashCards: () => void;
+  onPractice: () => void;
 };
 
 export function VocabInboxColumn({
@@ -32,30 +30,43 @@ export function VocabInboxColumn({
   isComposerOpen,
   draftValue,
   editingCardId,
-  editingCardText,
+  dictionaryLookupByCardId,
   onDraftChange,
   onOpenComposer,
   onCloseComposer,
   onAddCard,
   onEditCard,
-  onEditingCardTextChange,
-  onSaveCardEdit,
-  onCancelCardEdit,
+  onFetchDefinition,
   onRemoveCard,
   onCardDragStart,
   onDropCard,
-  onOpenFlashCards,
+  onPractice,
 }: VocabInboxColumnProps) {
   return (
     <BoardColumnShell
       accentClass="bg-paper-bg text-ink-fg"
       shellClass="border-ink-fg bg-surface-white"
+      eyebrow={null}
       title={
         <ColumnHeader
-          icon={<Inbox className="h-4 w-4" />}
-          title="Inbox"
+          icon={<Star className="h-4 w-4" />}
+          title="New Word"
           subtitle={`${cards.length} cards`}
-          menuButton={<ColumnActionButton onClick={onOpenFlashCards} disabled={cards.length === 0} />}
+          className="bg-paper-bg text-ink-fg"
+          hideDefaultMenu={cards.length === 0}
+          menuButton={cards.length > 0 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPractice();
+              }}
+              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink-fg bg-paper-bg text-ink-fg transition workbook-press"
+              title="Practice New Word"
+            >
+              <LibraryBig className="h-4 w-4" />
+            </button>
+          ) : null}
         />
       }
       onDrop={onDropCard}
@@ -79,18 +90,16 @@ export function VocabInboxColumn({
         )
       ) : (
         cards.map((card) => (
-          <EditableVocabCard
-            key={card.id}
-            card={card}
-            isEditing={editingCardId === card.id}
-            editingText={editingCardText}
-            onEditingTextChange={onEditingCardTextChange}
-            onEdit={() => onEditCard(card)}
-            onSave={onSaveCardEdit}
-            onCancel={onCancelCardEdit}
-            onRemove={() => onRemoveCard(card.id)}
-            onDragStart={onCardDragStart}
-          />
+            <EditableVocabCard
+              key={card.id}
+              card={card}
+              isEditing={editingCardId === card.id}
+              dictionaryStatus={dictionaryLookupByCardId[card.id]}
+              onEdit={() => onEditCard(card)}
+              onFetchDefinition={() => onFetchDefinition(card)}
+              onRemove={() => onRemoveCard(card.id)}
+              onDragStart={onCardDragStart}
+            />
         ))
       )}
       {cards.length > 0 || !isComposerOpen ? (

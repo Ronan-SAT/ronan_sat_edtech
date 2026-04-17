@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, useMemo, useState } from "react";
+import { CSSProperties, type ReactNode, useMemo, useState } from "react";
 import Latex from "react-latex-next";
 import { Bookmark } from "lucide-react";
 
@@ -12,6 +12,7 @@ import { getChoiceCode } from "@/utils/gradingHelper";
 
 const MAX_SPR_ANSWER_LENGTH = 200;
 const TALL_MATH_PATTERN = /\\(?:d?frac)|\^(?:\{[^}]+\}|\S)/;
+const MATH_DELIMITER_PATTERN = /(?<!\\)(\$\$?)(.*?)(?<!\\)\1/gs;
 
 function hasTallMath(text: string | undefined): boolean {
   if (!text) {
@@ -21,23 +22,46 @@ function hasTallMath(text: string | undefined): boolean {
   return TALL_MATH_PATTERN.test(text);
 }
 
-function loosenInlineLatex(text: string | undefined): string {
+function normalizePlainText(text: string): string {
+  return text.replace(/\\\$/g, "$"
+  );
+}
+
+function renderLatexContent(text: string | undefined): ReactNode {
   if (!text) {
     return "";
   }
 
-  return text.replace(/(\$\$?)(.*?)\1/gs, (match, delimiter, mathText) => {
-    if (delimiter === "$$") {
-      return match;
+  const parts: ReactNode[] = [];
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(MATH_DELIMITER_PATTERN)) {
+    const matchedText = match[0];
+    const delimiter = match[1];
+    const mathText = match[2] ?? "";
+    const matchIndex = match.index ?? 0;
+    const plainText = text.slice(lastIndex, matchIndex);
+
+    if (plainText) {
+      parts.push(normalizePlainText(plainText));
     }
 
     const normalizedMath = mathText.trim();
-    if (!hasTallMath(normalizedMath)) {
-      return match;
-    }
+    const renderedMath =
+      delimiter === "$" && hasTallMath(normalizedMath)
+        ? `$\\displaystyle ${normalizedMath.replace(/\\frac/g, "\\dfrac")}$`
+        : matchedText;
 
-    return `$\\displaystyle ${normalizedMath.replace(/\\frac/g, "\\dfrac")}$`;
-  });
+    parts.push(<Latex key={`${matchIndex}-${delimiter}`}>{renderedMath}</Latex>);
+    lastIndex = matchIndex + matchedText.length;
+  }
+
+  const trailingText = text.slice(lastIndex);
+  if (trailingText) {
+    parts.push(normalizePlainText(trailingText));
+  }
+
+  return parts.length > 0 ? parts : normalizePlainText(text);
 }
 
 type ViewerQuestion = {
@@ -126,10 +150,10 @@ export default function QuestionViewer({
       return null;
     }
 
-    return <Latex>{loosenInlineLatex(question.passage)}</Latex>;
+    return renderLatexContent(question.passage);
   }, [question.passage]);
   const questionTextContent = useMemo(
-    () => <Latex>{loosenInlineLatex(question.questionText)}</Latex>,
+    () => renderLatexContent(question.questionText),
     [question.questionText],
   );
 
@@ -366,7 +390,7 @@ export default function QuestionViewer({
                         }`}
                         sourceQuestionId={question._id}
                       >
-                        <Latex>{loosenInlineLatex(choice || "")}</Latex>
+                        {renderLatexContent(choice || "")}
                       </SelectableTextPanel>
                     </div>
 

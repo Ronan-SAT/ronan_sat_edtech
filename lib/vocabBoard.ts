@@ -1,10 +1,13 @@
 export const VOCAB_COLUMN_COLOR_KEYS = ["sky", "mint", "lavender", "peach", "sand"] as const;
+export const DEFAULT_VOCAB_COLUMN_COLOR_KEYS = VOCAB_COLUMN_COLOR_KEYS.filter((colorKey) => colorKey !== "sand");
 
 export type VocabColumnColorKey = (typeof VOCAB_COLUMN_COLOR_KEYS)[number];
 
 export type VocabCard = {
   id: string;
-  text: string;
+  term: string;
+  definition: string;
+  audioUrl?: string;
   createdAt: string;
   sourceQuestionId?: string;
 };
@@ -42,7 +45,8 @@ export function normalizeVocabBoard(raw: unknown): VocabBoardState {
   cardsEntries.forEach(([entryKey, rawCard], index) => {
     const value = rawCard as Partial<VocabCard> | undefined;
     const rawId = isString(value?.id) ? value.id : entryKey;
-    if (!isString(rawId) || !isString(value?.text) || !isString(value?.createdAt)) {
+    const parsedLegacyCard = parseVocabCardValue(value);
+    if (!isString(rawId) || !parsedLegacyCard || !isString(value?.createdAt)) {
       return;
     }
 
@@ -51,7 +55,9 @@ export function normalizeVocabBoard(raw: unknown): VocabBoardState {
     cardIdMap.set(rawId, nextId);
     normalizedCards[nextId] = {
       id: nextId,
-      text: value.text,
+      term: parsedLegacyCard.term,
+      definition: parsedLegacyCard.definition,
+      audioUrl: parsedLegacyCard.audioUrl,
       createdAt: value.createdAt,
       sourceQuestionId: isString(value.sourceQuestionId) ? value.sourceQuestionId : undefined,
     };
@@ -75,7 +81,7 @@ export function normalizeVocabBoard(raw: unknown): VocabBoardState {
             id: nextId,
             title: isString(column.title) ? column.title : "Untitled",
             cardIds: Array.from(new Set(remappedCardIds)),
-            colorKey: isColorKey(column.colorKey) ? column.colorKey : VOCAB_COLUMN_COLOR_KEYS[index % VOCAB_COLUMN_COLOR_KEYS.length],
+            colorKey: isColorKey(column.colorKey) ? column.colorKey : DEFAULT_VOCAB_COLUMN_COLOR_KEYS[index % DEFAULT_VOCAB_COLUMN_COLOR_KEYS.length],
           };
         })
     : [];
@@ -104,6 +110,61 @@ export function isVocabBoardEmpty(board: VocabBoardState) {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function parseVocabCardValue(value: Partial<VocabCard> | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  if (isString(value.term)) {
+    const term = normalizeVocabField(value.term);
+    if (!term) {
+      return null;
+    }
+
+    return {
+      term,
+      definition: isString(value.definition) ? normalizeVocabField(value.definition) : "",
+      audioUrl: isString(value.audioUrl) ? value.audioUrl.trim() : undefined,
+    };
+  }
+
+  const legacyText = "text" in value && isString((value as { text?: unknown }).text) ? (value as { text: string }).text : null;
+  if (!legacyText) {
+    return null;
+  }
+
+  return parseLegacyVocabText(legacyText);
+}
+
+function parseLegacyVocabText(text: string) {
+  const normalized = normalizeVocabField(text);
+  if (!normalized) {
+    return null;
+  }
+
+  const separatorMatch = normalized.match(/\s*[:\uFF1A]\s*/);
+  if (!separatorMatch || separatorMatch.index === undefined) {
+    return {
+      term: normalized,
+      definition: "",
+      audioUrl: undefined,
+    };
+  }
+
+  const separatorStart = separatorMatch.index;
+  const separatorEnd = separatorStart + separatorMatch[0].length;
+
+  return {
+    term: normalizeVocabField(normalized.slice(0, separatorStart)) || normalized,
+    definition: normalizeVocabField(normalized.slice(separatorEnd)),
+    audioUrl: undefined,
+  };
+}
+
+function normalizeVocabField(value: string) {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function isColorKey(value: unknown): value is VocabColumnColorKey {

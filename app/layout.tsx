@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Sans, Geist_Mono } from "next/font/google";
 
 import AppShell from "@/components/AppShell";
 import AuthProvider from "@/components/AuthProvider";
+import { WorkbookToaster } from "@/components/ui/WorkbookToaster";
 import { VocabBoardProvider } from "@/components/vocab/VocabBoardProvider";
 import "./globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}>
         <AuthProvider>
           <VocabBoardProvider>
+            <WorkbookToaster />
             <AppShell>{children}</AppShell>
           </VocabBoardProvider>
         </AuthProvider>

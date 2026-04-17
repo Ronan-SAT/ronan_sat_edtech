@@ -219,6 +219,12 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 
 - `components/QuestionViewer.tsx` now collapses the split passage-and-question layout into a vertical stack on smaller screens, keeps the draggable divider desktop-only, and reduces mobile padding and answer density so the exam room stays usable on narrow devices.
 
+### 2026-04-17 Vocab Revision Upgrade Start
+
+- The SAT vocab board is being extended from plain text cards into revision cards with a dedicated term plus editable definition.
+- The feature scope includes per-card practice access, collection-level flashcard practice, and a free dictionary lookup action that can prefill a card definition for later editing.
+- Backward compatibility matters here because persisted boards already exist, so normalization should upgrade legacy `word: meaning` text cards into the new structured shape instead of dropping user data.
+
 ### 2026-04-14 Dracula Testing Room Theme
 
 - `lib/testingRoomTheme.ts` now includes a third `dracula` preset with a dark graphite shell, crimson accents, and shared styling tokens for the test shell, header, footer, viewer, Desmos overlay, and settings preview card.

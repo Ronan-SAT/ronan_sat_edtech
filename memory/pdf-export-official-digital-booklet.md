@@ -61,6 +61,8 @@
 - CSS spacing alone was not enough for cramped fractions. The PDF renderer now also prepends `\displaystyle` to tall inline math before KaTeX renders it, which avoids the smaller `mtight` inline-fraction form and materially improves legibility in prompts and answer choices.
 - The durable label-alignment fix for math answer choices is layout-level: use baseline alignment on each answer row so `A)`, `B)`, etc. track the first visible text/math baseline instead of the top of the tallest KaTeX box. Manual per-label vertical nudges were tested and abandoned because fractional exponents still produced worse drift in print.
 - Pure-math choices can also be shifted by inherited paragraph spacing. In the PDF template, paragraphs inside `.question-card-body` should reset top margin (`margin: 0 0 ...`) so math-only options do not start lower than their label.
+- Figures/images inside question content are now intentionally centered and capped at roughly two-thirds of the column width. If that changes again, inspect `.question-extra-wrap--figure` and `.question-card img` in `utils/questionTemplate.ts` rather than resizing individual assets.
+- Escaped currency such as `\$1` must not trigger KaTeX parsing. The template now matches math delimiters only on unescaped dollar signs and converts escaped dollars back to literal `$` after markdown parsing.
 - If the banner width looks wrong again, inspect both:
   - `buildTopBand()` markup in `utils/questionTemplate.ts`
   - the active `.top-band` and `.top-band-image` CSS in the generated template

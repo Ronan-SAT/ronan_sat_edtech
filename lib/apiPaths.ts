@@ -8,6 +8,7 @@ export const API_PATHS = {
     USER_SETTINGS: "/api/user/settings",
     USER_PASSWORD: "/api/user/password",
     USER_VOCAB_BOARD: "/api/user/vocab-board",
+    VOCAB_DICTIONARY: "/api/vocab/dictionary",
     FIX_BOARD: "/api/fix-board",
     FIX_REPORTS: "/api/fix-reports",
     TESTS: "/api/tests",
