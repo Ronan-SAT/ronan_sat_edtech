@@ -57,7 +57,7 @@ export async function PUT(req: Request) {
 
     await dbConnect();
 
-    const updatedUser = await User.findOneAndUpdate(userLookup, { vocabBoard: board }, { new: true }).select("_id");
+    const updatedUser = await User.findOneAndUpdate(userLookup, { vocabBoard: board }, { returnDocument: "after" }).select("_id");
 
     if (!updatedUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

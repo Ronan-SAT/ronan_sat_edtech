@@ -1,26 +1,23 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
 import { getClientCache, setClientCache } from "@/lib/clientCache";
-import { fetchQuestionExplanation, fetchReviewResults } from "@/lib/services/reviewService";
+import { fetchQuestionExplanation } from "@/lib/services/reviewService";
 import type { ReviewAnswer, ReviewResult } from "@/types/review";
 import { filterReviewResultsByType } from "@/components/review/reviewPage.utils";
 
 const REVIEW_RESULTS_CACHE_KEY = "review:results";
 
-export function useReviewPageController() {
-  const { status } = useSession();
+export function useReviewPageController(initialResults: ReviewResult[]) {
   const searchParams = useSearchParams();
   const urlMode = searchParams.get("mode");
   const urlTestId = searchParams.get("testId");
   const urlResultId = searchParams.get("resultId");
-  const initialResultsCacheRef = useRef<ReviewResult[]>([]);
-  const [hasHydratedClientCache, setHasHydratedClientCache] = useState(false);
-  const [results, setResults] = useState<ReviewResult[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initialResultsCacheRef = useRef<ReviewResult[]>(initialResults);
+  const [results, setResults] = useState<ReviewResult[]>(initialResults);
+  const [loading, setLoading] = useState(initialResults.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [testType, setTestType] = useState<"full" | "sectional">(urlMode === "sectional" ? "sectional" : "full");
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
@@ -34,65 +31,17 @@ export function useReviewPageController() {
   const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY) ?? [];
-    initialResultsCacheRef.current = cachedResults;
+    const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY);
+    const nextResults = cachedResults ?? initialResultsCacheRef.current;
 
-    if (cachedResults.length > 0) {
-      setResults(cachedResults);
-      setLoading(false);
+    initialResultsCacheRef.current = nextResults;
+    setResults(nextResults);
+    setLoading(nextResults.length === 0);
+
+    if (nextResults.length > 0) {
+      setClientCache(REVIEW_RESULTS_CACHE_KEY, nextResults);
     }
-
-    setHasHydratedClientCache(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hasHydratedClientCache) {
-      return;
-    }
-
-    if (status === "unauthenticated") {
-      window.location.href = "/auth";
-      return;
-    }
-
-    if (status !== "authenticated") {
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadResults = async () => {
-      if (initialResultsCacheRef.current.length > 0) {
-        setLoading(false);
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
-
-      try {
-        const data = await fetchReviewResults();
-        if (cancelled) {
-          return;
-        }
-
-        setResults(data);
-        setClientCache(REVIEW_RESULTS_CACHE_KEY, data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setRefreshing(false);
-        }
-      }
-    };
-
-    void loadResults();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hasHydratedClientCache, status]);
+  }, [initialResults]);
 
   const filteredResults = useMemo(() => filterReviewResultsByType(results, testType), [results, testType]);
 
@@ -119,8 +68,8 @@ export function useReviewPageController() {
     }
 
     if (urlTestId && !isManuallySelected) {
-      const matchForUrl = filteredResults.find((r) => {
-        const tId = typeof r.testId === "object" ? r.testId?._id : r.testId;
+      const matchForUrl = filteredResults.find((result) => {
+        const tId = typeof result.testId === "object" ? result.testId?._id : result.testId;
         return tId === urlTestId;
       });
       if (matchForUrl) {
@@ -162,7 +111,6 @@ export function useReviewPageController() {
   };
 
   return {
-    status,
     results,
     loading,
     refreshing,
@@ -173,6 +121,9 @@ export function useReviewPageController() {
     loadingExplanations,
     filteredResults,
     activeTest,
+    setResults,
+    setLoading,
+    setRefreshing,
     setTestType,
     setActiveTestId: (id: string | null) => {
       setIsManuallySelected(true);

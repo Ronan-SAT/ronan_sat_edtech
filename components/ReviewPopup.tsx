@@ -4,16 +4,15 @@ import { useState } from "react";
 import { AlertCircle, BookOpen, Calculator, ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
 import "katex/dist/katex.min.css";
 
-
 import DesmosCalculator from "@/components/DesmosCalculator";
 import QuestionExtraBlock from "@/components/question/QuestionExtraBlock";
+import RichTextWithLatex from "@/components/RichTextWithLatex";
 import ReviewChatbot from "@/components/ReviewChatbot";
 import { ReportErrorButton } from "@/components/report/ReportErrorButton";
 import PassageColumn from "@/components/review/PassageCollumn";
 import AnswerDetails from "@/components/review/AnswerDetails";
 import SelectableTextPanel, { type TextAnnotation } from "@/components/test/SelectableTextPanel";
 import type { ReviewAnswer } from "@/types/review";
-import { renderHtmlLatexContent } from "@/utils/renderContent";
 
 interface ReviewPopupProps {
   ans: ReviewAnswer;
@@ -155,7 +154,7 @@ export default function ReviewPopup({
                 <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">
                   <div className="workbook-sticker bg-primary text-ink-fg">Question</div>
                   <p className="mt-4 text-[17.5px] leading-[1.7] text-ink-fg font-[Georgia,serif]">
-                    {renderHtmlLatexContent(q.questionText || "")}
+                    <RichTextWithLatex text={q.questionText || ""} loosenTallInlineMath />
                   </p>
                 </div>
               </div>
@@ -170,7 +169,7 @@ export default function ReviewPopup({
                   <div className="p-6">
                     {expandedExplanation ? (
                       <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink-fg">
-                        {renderHtmlLatexContent(expandedExplanation || "")}
+                        <RichTextWithLatex text={expandedExplanation || ""} loosenTallInlineMath />
                       </p>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-ink-fg/70">

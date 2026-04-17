@@ -2,8 +2,10 @@
 
 import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { useSession } from "next-auth/react";
 
-import { useVocabBoard } from "@/components/vocab/VocabBoardProvider";
+import { useOptionalVocabBoard } from "@/components/vocab/VocabBoardProvider";
+import { addVocabCardOutsideProvider } from "@/lib/services/vocabBoardClientService";
 import { getTestingRoomThemePreset, type TestingRoomTheme } from "@/lib/testingRoomTheme";
 
 export type TextAnnotation = {
@@ -54,7 +56,9 @@ export default function SelectableTextPanel({
   const nextAnnotationIdRef = useRef(0);
   const lastAppliedSignatureRef = useRef<string | null>(null);
   const [toolbar, setToolbar] = useState<ToolbarState | null>(null);
-  const { addVocabCard } = useVocabBoard();
+  const [isSavingToVocab, setIsSavingToVocab] = useState(false);
+  const vocabBoard = useOptionalVocabBoard();
+  const { data: session, status: sessionStatus } = useSession();
   const viewerTheme = getTestingRoomThemePreset(theme).viewer;
   const pendingSelection = toolbar?.pendingSelection ?? null;
   const pendingText = toolbar?.pendingText ?? "";
@@ -257,14 +261,33 @@ export default function SelectableTextPanel({
     clearSelection();
   };
 
-  const handleAddToVocab = () => {
-    if (!canSavePendingSelection) {
+  const handleAddToVocab = async () => {
+    if (!canSavePendingSelection || isSavingToVocab || sessionStatus === "loading") {
       return;
     }
 
-    addVocabCard(pendingText, sourceQuestionId);
-    setToolbar(null);
-    clearSelection();
+    try {
+      setIsSavingToVocab(true);
+
+      if (vocabBoard) {
+        vocabBoard.addVocabCard(pendingText, sourceQuestionId);
+      } else {
+        await addVocabCardOutsideProvider({
+          isAuthenticated: sessionStatus === "authenticated",
+          userId: session?.user?.id,
+          userEmail: session?.user?.email,
+          text: pendingText,
+          sourceQuestionId,
+        });
+      }
+
+      setToolbar(null);
+      clearSelection();
+    } catch (error) {
+      console.error("Failed to add selection to vocab board:", error);
+    } finally {
+      setIsSavingToVocab(false);
+    }
   };
 
   const activeAnnotation = toolbar?.activeAnnotationId
@@ -291,10 +314,11 @@ export default function SelectableTextPanel({
           {canSavePendingSelection ? (
             <button
               type="button"
-              onClick={handleAddToVocab}
+              onClick={() => void handleAddToVocab()}
+              disabled={isSavingToVocab || sessionStatus === "loading"}
               className={`mb-1.5 px-3 py-1 ${viewerTheme.annotationAddButtonClass}`}
             >
-              Add to Vocab
+              {isSavingToVocab ? "Saving..." : "Add to Vocab"}
             </button>
           ) : null}
 

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { getServerSession } from "next-auth";
 import { Bricolage_Grotesque, DM_Sans, Geist_Mono } from "next/font/google";
 
 import AppShell from "@/components/AppShell";
 import AuthProvider from "@/components/AuthProvider";
 import { WorkbookToaster } from "@/components/ui/WorkbookToaster";
-import { VocabBoardProvider } from "@/components/vocab/VocabBoardProvider";
+import { authOptions } from "@/lib/authOptions";
 import "./globals.css";
 
 const displayFont = Bricolage_Grotesque({
@@ -34,19 +35,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession(authOptions);
+
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}>
-        <AuthProvider>
-          <VocabBoardProvider>
-            <WorkbookToaster />
-            <AppShell>{children}</AppShell>
-          </VocabBoardProvider>
+        <AuthProvider session={session}>
+          <WorkbookToaster />
+          <AppShell>{children}</AppShell>
         </AuthProvider>
       </body>
     </html>

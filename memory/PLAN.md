@@ -269,3 +269,20 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - QR links now target a dedicated entry route at `app/test/[id]/entry/page.tsx` instead of dropping straight into the timed room.
 - The new `/test/[id]/entry` screen supports both full-length and sectional links, shows exam specs before launch, and for sectional links without a module lets the student choose the module from that screen.
 - Shared test-room link construction now lives in `lib/testEntryLinks.ts`; future QR, share-link, or invite work should build on that helper rather than manually assembling `/test/...` URLs in multiple places.
+
+### 2026-04-17 Performance Optimization Pass Start
+
+- This pass focuses on reducing repeated client boot work, duplicated network requests, oversized API payloads, and avoidable route waterfalls across dashboard, review, test library, admin, and parent flows.
+- The main architectural direction is to move protected-route gating and initial data preparation back to the server wherever practical, while keeping interactive workbook UI in focused client components.
+- Shared client request deduplication should extend the existing `lib/clientCache.ts` utility instead of introducing a parallel query library.
+- Vocab and fix board providers should stay route-local only; the root app shell should not hydrate board state for unrelated routes.
+- Result fetching should split into lightweight summary payloads for dashboard/library consumers and detailed review payloads for the review flow.
+- Test and question list endpoints should keep their current user-facing behavior, but return narrower DTOs and reuse explicit cache invalidation on admin mutations.
+
+### 2026-04-17 Performance Optimization Pass Complete
+
+- Protected student, parent, admin, and settings entrypoints now load from the server first and hand preloaded props into focused client components instead of starting with route-level client fetch waterfalls.
+- `lib/clientCache.ts` now dedupes in-flight requests; dashboard, review, question, and chatbot reads now reuse that shared cache path.
+- Results are now normalized into separate `summary` and `detail` view shapes at the service boundary, preventing the dashboard/library surfaces from pulling full populated review payloads.
+- The parent dashboard data model now comes from `lib/services/parentDashboardService.ts`, which is shared by the page and API route so the heavy aggregation logic only exists in one place.
+- Verification completed with `npm run lint` and `npm run build`.

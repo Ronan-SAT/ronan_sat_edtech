@@ -5,22 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
+import { clearClientCache } from "@/lib/clientCache";
+import { fetchQuestionsByTestId, type TestQuestionPayload } from "@/lib/services/questionClientService";
 import type { QuestionExtra } from "@/lib/questionExtra";
 import { normalizeSectionName, VERBAL_SECTION } from "@/lib/sections";
 import { checkIsCorrect } from "@/utils/gradingHelper";
 import { useTimer } from "./useTimer";
 
-type TestQuestion = {
-  _id: string;
-  section: string;
-  module: number;
-  points?: number;
-  correctAnswer?: string;
-  questionType?: string;
-  sprAnswers?: string[];
-  questionText?: string;
-  passage?: string;
-  choices?: string[];
+type TestQuestion = TestQuestionPayload & {
   extra?: QuestionExtra | null;
 };
 
@@ -70,18 +62,8 @@ export function useTestEngine(testId: string) {
     const fetchQuestions = async () => {
       setLoading(true);
       try {
-        const res = await api.get(API_PATHS.getQuestionsByTestId(testId), {
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        });
-
-        const fetchedQuestions = (res.data.questions || []).map((question: TestQuestion) => ({
-          ...question,
-          section: normalizeSectionName(question.section),
-        }));
-        setQuestions(fetchedQuestions);
+        const fetchedQuestions = await fetchQuestionsByTestId(testId);
+        setQuestions(fetchedQuestions as TestQuestion[]);
         setCurrentIndex(0);
 
         const validStages = testStages
@@ -196,6 +178,9 @@ export function useTestEngine(testId: string) {
         });
 
         if (res.status === 200 || res.status === 201) {
+          // Invalidate dashboard caches so fresh scores appear on the next visit.
+          clearClientCache("dashboard:");
+          clearClientCache("api:dashboard:");
           router.push(`/review?testId=${testId}&mode=sectional`);
         }
       } else {
@@ -229,6 +214,9 @@ export function useTestEngine(testId: string) {
         });
 
         if (res.status === 200 || res.status === 201) {
+          // Invalidate dashboard caches so fresh scores appear on the next visit.
+          clearClientCache("dashboard:");
+          clearClientCache("api:dashboard:");
           router.push(`/review?testId=${testId}&mode=full`);
         }
       }

@@ -6,11 +6,21 @@ import Result from "@/lib/models/Result";
 import { isVerbalSection } from "@/lib/sections";
 import Test from "@/lib/models/Test";
 import User from "@/lib/models/User";
+import { clearLeaderboardCache } from "@/lib/services/leaderboardService";
 import { ResultValidationSchema } from "@/lib/schema/result";
+import type { ReviewAnswer, ReviewQuestion, ReviewResult } from "@/types/review";
+import type { UserResultSummary } from "@/types/testLibrary";
 
 type ValidatedAnswer = {
   questionId: string;
   userAnswer?: string | null;
+};
+
+type ResultView = "summary" | "detail";
+
+type GetUserResultsOptions = {
+  days?: number;
+  view?: ResultView;
 };
 
 function normalizeText(value?: string | null) {
@@ -82,6 +92,152 @@ function clampFullLengthSectionScore(score: number, hasSection: boolean) {
   }
 
   return Math.max(200, Math.min(800, score));
+}
+
+function toSerializedId(value: unknown) {
+  if (!value) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value instanceof mongoose.Types.ObjectId) {
+    return value.toString();
+  }
+
+  if (typeof value === "object" && value !== null && "_id" in value) {
+    const nestedId = (value as { _id?: unknown })._id;
+    return toSerializedId(nestedId);
+  }
+
+  return undefined;
+}
+
+function toSerializedDate(value: unknown) {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function normalizeTestReference(testId: unknown) {
+  if (!testId) {
+    return null;
+  }
+
+  if (typeof testId === "string" || testId instanceof mongoose.Types.ObjectId) {
+    return toSerializedId(testId) ?? null;
+  }
+
+  if (typeof testId === "object") {
+    return {
+      _id: toSerializedId(testId),
+      title: "title" in testId && typeof testId.title === "string" ? testId.title : undefined,
+    };
+  }
+
+  return null;
+}
+
+function normalizeSummaryResult(result: Record<string, unknown>): UserResultSummary {
+  return {
+    _id: toSerializedId(result._id),
+    testId: normalizeTestReference(result.testId),
+    sectionalSubject: typeof result.sectionalSubject === "string" ? result.sectionalSubject : undefined,
+    sectionalModule: typeof result.sectionalModule === "number" ? result.sectionalModule : undefined,
+    answers: Array.isArray(result.answers)
+      ? result.answers.map((answer) => ({
+          isCorrect: Boolean((answer as { isCorrect?: unknown }).isCorrect),
+        }))
+      : undefined,
+    score: typeof result.score === "number" ? result.score : undefined,
+    isSectional: Boolean(result.isSectional),
+    totalScore: typeof result.totalScore === "number" ? result.totalScore : undefined,
+    readingScore: typeof result.readingScore === "number" ? result.readingScore : undefined,
+    mathScore: typeof result.mathScore === "number" ? result.mathScore : undefined,
+    createdAt: toSerializedDate(result.createdAt),
+    date: toSerializedDate(result.date),
+    updatedAt: toSerializedDate(result.updatedAt),
+  };
+}
+
+function normalizeReviewQuestion(question: unknown): ReviewQuestion | null | undefined {
+  if (question === null) {
+    return null;
+  }
+
+  if (!question || typeof question !== "object") {
+    return undefined;
+  }
+
+  const source = question as Record<string, unknown>;
+
+  return {
+    _id: toSerializedId(question) ?? "",
+    section: typeof source.section === "string" ? source.section : undefined,
+    module: typeof source.module === "number" ? source.module : undefined,
+    domain: typeof source.domain === "string" ? source.domain : undefined,
+    skill: typeof source.skill === "string" ? source.skill : undefined,
+    questionType:
+      source.questionType === "multiple_choice" || source.questionType === "spr"
+        ? source.questionType
+        : undefined,
+    questionText: typeof source.questionText === "string" ? source.questionText : undefined,
+    correctAnswer: typeof source.correctAnswer === "string" ? source.correctAnswer : undefined,
+    choices: Array.isArray(source.choices) ? source.choices.filter((choice): choice is string => typeof choice === "string") : undefined,
+    sprAnswers: Array.isArray(source.sprAnswers)
+      ? source.sprAnswers.filter((answer): answer is string => typeof answer === "string")
+      : undefined,
+    passage: typeof source.passage === "string" ? source.passage : undefined,
+    imageUrl: typeof source.imageUrl === "string" ? source.imageUrl : undefined,
+    extra: "extra" in source ? source.extra : undefined,
+  };
+}
+
+function normalizeReviewAnswer(answer: unknown): ReviewAnswer {
+  if (!answer || typeof answer !== "object") {
+    return {
+      isCorrect: false,
+    };
+  }
+
+  const source = answer as Record<string, unknown>;
+
+  return {
+    questionId: normalizeReviewQuestion(source.questionId),
+    userAnswer: typeof source.userAnswer === "string" ? source.userAnswer : undefined,
+    isCorrect: Boolean(source.isCorrect),
+  };
+}
+
+function normalizeDetailResult(result: Record<string, unknown>): ReviewResult {
+  const testReference = normalizeTestReference(result.testId);
+
+  return {
+    _id: toSerializedId(result._id) ?? "",
+    testId: testReference && typeof testReference === "object" ? testReference : null,
+    date: toSerializedDate(result.date),
+    createdAt: toSerializedDate(result.createdAt),
+    score: typeof result.score === "number" ? result.score : undefined,
+    totalScore: typeof result.totalScore === "number" ? result.totalScore : undefined,
+    readingScore: typeof result.readingScore === "number" ? result.readingScore : undefined,
+    mathScore: typeof result.mathScore === "number" ? result.mathScore : undefined,
+    isSectional: Boolean(result.isSectional),
+    sectionalSubject: typeof result.sectionalSubject === "string" ? result.sectionalSubject : undefined,
+    sectionalModule: typeof result.sectionalModule === "number" ? result.sectionalModule : undefined,
+    answers: Array.isArray(result.answers) ? result.answers.map(normalizeReviewAnswer) : [],
+  };
 }
 
 export const resultService = {
@@ -235,10 +391,12 @@ export const resultService = {
       console.error("User stats update failed after result creation", userUpdateError);
     }
 
+    clearLeaderboardCache();
+
     return newResult;
   },
 
-  async getUserResults(userId: string, days?: number) {
+  async getUserResults(userId: string, options: GetUserResultsOptions = {}) {
     await dbConnect();
 
     const query: {
@@ -246,20 +404,31 @@ export const resultService = {
       createdAt?: { $gte: Date };
     } = { userId };
 
-    const createdAtFilter = buildDateFilter(days);
+    const createdAtFilter = buildDateFilter(options.days);
     if (createdAtFilter) {
       query.createdAt = createdAtFilter;
     }
 
-    const results = await Result.find(query)
-      .sort({ createdAt: -1 })
-      .populate("testId", "title")
+    const resultQuery = Result.find(query).sort({ createdAt: -1 }).populate("testId", "title");
+
+    if (options.view === "summary") {
+      const results = await resultQuery
+        .select(
+          "_id testId isSectional sectionalSubject sectionalModule answers.isCorrect score totalScore readingScore mathScore createdAt date updatedAt",
+        )
+        .lean();
+
+      return { results: ((results as unknown) as Record<string, unknown>[]).map(normalizeSummaryResult) };
+    }
+
+    const results = await resultQuery
       .populate({
         path: "answers.questionId",
         model: "Question",
-        select: "questionText correctAnswer _id choices passage domain skill questionType sprAnswers section module extra",
-      });
+        select: "questionText correctAnswer _id imageUrl choices passage domain skill questionType sprAnswers section module extra",
+      })
+      .lean();
 
-    return { results };
+    return { results: ((results as unknown) as Record<string, unknown>[]).map(normalizeDetailResult) };
   },
 };

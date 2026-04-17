@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
 
 import { getClientCache, setClientCache } from "@/lib/clientCache";
-import { fetchDashboardUserResults } from "@/lib/services/dashboardService";
-import {
-  fetchTestsPage,
-  getTestsClientCacheKey,
-} from "@/lib/services/testLibraryService";
+import { fetchTestsPage, getTestsClientCacheKey } from "@/lib/services/testLibraryService";
 import type { CachedTestsPayload, SortOption, TestListItem, UserResultSummary } from "@/types/testLibrary";
 
-export function useSectionalTestsController() {
-  const { data: session, status } = useSession();
+export function useSectionalTestsController(initialUserResults: UserResultSummary[]) {
   const pageSize = 15;
   const initialTestsCacheRef = useRef<CachedTestsPayload | undefined>(undefined);
   const [hasHydratedClientCache, setHasHydratedClientCache] = useState(false);
@@ -20,7 +14,6 @@ export function useSectionalTestsController() {
   const [uniquePeriods, setUniquePeriods] = useState<string[]>(["All"]);
   const [loading, setLoading] = useState(true);
   const [testsRefreshing, setTestsRefreshing] = useState(false);
-  const [userResults, setUserResults] = useState<UserResultSummary[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [page, setPage] = useState(1);
   const [selectedPeriod, setSelectedPeriod] = useState("All");
@@ -54,23 +47,6 @@ export function useSectionalTestsController() {
   }, [moduleFilter]);
 
   useEffect(() => {
-    if (!session) {
-      return;
-    }
-
-    const loadUserResults = async () => {
-      try {
-        const nextResults = await fetchDashboardUserResults();
-        setUserResults(nextResults);
-      } catch (error) {
-        console.error("Failed to load results", error);
-      }
-    };
-
-    void loadUserResults();
-  }, [session]);
-
-  useEffect(() => {
     if (page > totalPages && totalPages > 0) {
       setPage(totalPages);
     }
@@ -96,11 +72,12 @@ export function useSectionalTestsController() {
         setUniquePeriods(cachedTests.availablePeriods);
         setTotalPages(cachedTests.totalPages);
         setLoading(false);
-        setTestsRefreshing(true);
-      } else {
-        setLoading(true);
         setTestsRefreshing(false);
+        return;
       }
+
+      setLoading(true);
+      setTestsRefreshing(false);
 
       try {
         const nextPayload = await fetchTestsPage(page, pageSize, sortOption, filters);
@@ -131,11 +108,10 @@ export function useSectionalTestsController() {
   }, [hasHydratedClientCache, page, pageSize, selectedPeriod, sortOption, moduleFilter]);
 
   return {
-    status,
     hasCachedSectionalView,
     loading,
     testsRefreshing,
-    userResults,
+    userResults: initialUserResults,
     sortOption,
     page,
     totalPages,

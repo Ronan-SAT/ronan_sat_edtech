@@ -4,15 +4,14 @@ import { CSSProperties, useMemo, useState } from "react";
 import { Bookmark } from "lucide-react";
 
 import QuestionExtraBlock from "@/components/question/QuestionExtraBlock";
+import RichTextWithLatex from "@/components/RichTextWithLatex";
 import SelectableTextPanel, { type TextAnnotation } from "@/components/test/SelectableTextPanel";
 import { hasQuestionExtra, type QuestionExtra } from "@/lib/questionExtra";
 import { getTestingRoomThemePreset, type TestingRoomTheme } from "@/lib/testingRoomTheme";
 import { getChoiceCode } from "@/utils/gradingHelper";
-import { renderHtmlLatexContent, hasTallMath } from "@/utils/renderContent";
+import { hasTallMath } from "@/utils/renderContent";
 
 const MAX_SPR_ANSWER_LENGTH = 200;
-
-
 
 type ViewerQuestion = {
   _id: string;
@@ -100,10 +99,10 @@ export default function QuestionViewer({
       return null;
     }
 
-    return renderHtmlLatexContent(question.passage);
+    return <RichTextWithLatex text={question.passage} loosenTallInlineMath />;
   }, [question.passage]);
   const questionTextContent = useMemo(
-    () => renderHtmlLatexContent(question.questionText),
+    () => <RichTextWithLatex text={question.questionText} loosenTallInlineMath />,
     [question.questionText],
   );
 
@@ -340,7 +339,7 @@ export default function QuestionViewer({
                         }`}
                         sourceQuestionId={question._id}
                       >
-                        {renderHtmlLatexContent(choice || "")}
+                        <RichTextWithLatex text={choice || ""} loosenTallInlineMath />
                       </SelectableTextPanel>
                     </div>
 

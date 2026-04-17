@@ -2,9 +2,6 @@
 
 import { questionController } from "@/lib/controllers/questionController";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 export async function GET(req: Request) {
     return questionController.getQuestions(req);
 }
