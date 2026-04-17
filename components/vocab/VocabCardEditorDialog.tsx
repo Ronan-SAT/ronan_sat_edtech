@@ -2,6 +2,7 @@ import { BookOpenCheck, LoaderCircle, Volume2, X } from "lucide-react";
 
 import type { VocabCard } from "@/components/vocab/VocabBoardProvider";
 import { playVocabPronunciation } from "@/components/vocab/pronunciation";
+import { MAX_VOCAB_DEFINITION_LENGTH } from "@/lib/vocabBoard";
 
 type VocabCardEditorDialogProps = {
   card: VocabCard | null;
@@ -85,7 +86,7 @@ export function VocabCardEditorDialog({
             </div>
             <textarea
               value={editingDefinition}
-              onChange={(event) => onEditingDefinitionChange(event.target.value)}
+              onChange={(event) => onEditingDefinitionChange(event.target.value.slice(0, MAX_VOCAB_DEFINITION_LENGTH))}
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   onClose();
@@ -96,10 +97,14 @@ export function VocabCardEditorDialog({
                   onSave();
                 }
               }}
+              maxLength={MAX_VOCAB_DEFINITION_LENGTH}
               className="min-h-[180px] w-full resize-y rounded-[16px] border-2 border-ink-fg bg-paper-bg px-4 py-3 text-[15px] leading-6 text-ink-fg outline-none"
               placeholder="Definition, nuance, or example"
             />
-            {dictionaryStatus?.message ? <div className={`mt-2 text-[12px] font-medium ${helperToneClass}`}>{dictionaryStatus.message}</div> : null}
+            <div className="mt-2 flex items-center justify-between gap-3">
+              {dictionaryStatus?.message ? <div className={`text-[12px] font-medium ${helperToneClass}`}>{dictionaryStatus.message}</div> : <div />}
+              <div className="text-[12px] font-medium text-ink-fg/60">{editingDefinition.length}/{MAX_VOCAB_DEFINITION_LENGTH}</div>
+            </div>
           </div>
         </div>
 

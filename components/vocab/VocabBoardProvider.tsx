@@ -9,6 +9,7 @@ import {
   isVocabBoardEmpty,
   normalizeVocabBoard,
   DEFAULT_VOCAB_COLUMN_COLOR_KEYS,
+  MAX_VOCAB_DEFINITION_LENGTH,
   type VocabBoardState,
   type VocabColumnColorKey,
 } from "@/lib/vocabBoard";
@@ -164,7 +165,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       addVocabCard: (text, sourceQuestionId, destination = "inbox") => {
         const parsedDraft = parseDraftToCardFields(text);
         const normalizedTerm = normalizeText(parsedDraft.term);
-        const normalizedDefinition = normalizeText(parsedDraft.definition);
+        const normalizedDefinition = normalizeDefinition(parsedDraft.definition);
         if (!normalizedTerm) {
           return null;
         }
@@ -251,7 +252,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       },
       updateCard: (cardId, nextCard) => {
         const normalizedTerm = normalizeText(nextCard.term);
-        const normalizedDefinition = normalizeText(nextCard.definition);
+        const normalizedDefinition = normalizeDefinition(nextCard.definition);
         const normalizedAudioUrl = nextCard.audioUrl?.trim() || undefined;
         if (!normalizedTerm) {
           return;
@@ -410,6 +411,10 @@ function findDuplicateCardId(board: VocabBoardState, normalizedText: string) {
 
 function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();
+}
+
+function normalizeDefinition(text: string) {
+  return normalizeText(text).slice(0, MAX_VOCAB_DEFINITION_LENGTH);
 }
 
 function createUniqueId(prefix: string, idRef: React.MutableRefObject<number>) {

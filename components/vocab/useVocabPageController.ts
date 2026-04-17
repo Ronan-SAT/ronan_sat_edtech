@@ -4,6 +4,7 @@ import { createElement, useEffect, useMemo, useRef, useState, type DragEvent } f
 
 import { API_PATHS } from "@/lib/apiPaths";
 import toast from "react-hot-toast";
+import { MAX_VOCAB_DEFINITION_LENGTH } from "@/lib/vocabBoard";
 import {
   useVocabBoard,
   type VocabCard,
@@ -241,7 +242,7 @@ export function useVocabPageController() {
 
     updateCard(editingCardId, {
       term: editingCardTerm,
-      definition: editingCardDefinition,
+      definition: editingCardDefinition.slice(0, MAX_VOCAB_DEFINITION_LENGTH),
       audioUrl: editingCardAudioUrl,
     });
     setEditingCardId(null);
@@ -298,7 +299,7 @@ export function useVocabPageController() {
         throw new Error(payload.error || "Definition not found");
       }
 
-      const nextDefinition = preservedDefinition || payload.definition || "";
+      const nextDefinition = (preservedDefinition || payload.definition || "").slice(0, MAX_VOCAB_DEFINITION_LENGTH);
 
       if (editingCardId === cardId) {
         setEditingCardDefinition(nextDefinition);

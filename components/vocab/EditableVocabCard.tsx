@@ -27,22 +27,26 @@ export function EditableVocabCard({
   return (
     <article
       draggable={!isEditing}
+      onClick={onEdit}
       onDragStart={() => onDragStart(card.id)}
-      className="group rounded-[16px] border-2 border-ink-fg bg-surface-white px-3 py-2.5 text-ink-fg brutal-shadow-sm transition workbook-press"
+      className="group cursor-pointer rounded-[16px] border-2 border-ink-fg bg-surface-white px-3 py-2.5 text-ink-fg brutal-shadow-sm transition workbook-press"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex flex-1 items-center gap-1.5">
-          <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
+          <div className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-1.5">
             <div className="truncate text-[16px] font-black leading-6 tracking-[-0.02em] text-ink-fg">{card.term}</div>
           </div>
-          </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
           <button
             type="button"
-            onClick={onFetchDefinition}
+            onClick={(event) => {
+              event.stopPropagation();
+              onFetchDefinition();
+            }}
             disabled={dictionaryStatus?.status === "loading"}
             className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink-fg bg-accent-1 text-ink-fg transition workbook-press disabled:cursor-not-allowed disabled:opacity-60"
             title="Fetch definition"
@@ -54,7 +58,10 @@ export function EditableVocabCard({
         {!isEditing ? (
           <button
             type="button"
-            onClick={onRemove}
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove();
+            }}
             title="Mark as complete"
             className="rounded-full border-2 border-ink-fg bg-paper-bg p-0.5 text-ink-fg opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
           >
@@ -63,11 +70,11 @@ export function EditableVocabCard({
         ) : null}
       </div>
 
-      <button type="button" onClick={onEdit} className="-mt-0.5 block w-full text-left">
+      <div className="-mt-0.5 block w-full text-left">
         <div className={`truncate text-[12px] leading-4 ${card.definition ? "text-ink-fg/65" : "italic text-ink-fg/40"}`}>
           {card.definition || "No definition yet"}
         </div>
-      </button>
+      </div>
     </article>
   );
 }

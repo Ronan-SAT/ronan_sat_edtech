@@ -1,5 +1,6 @@
 export const VOCAB_COLUMN_COLOR_KEYS = ["sky", "mint", "lavender", "peach", "sand"] as const;
 export const DEFAULT_VOCAB_COLUMN_COLOR_KEYS = VOCAB_COLUMN_COLOR_KEYS.filter((colorKey) => colorKey !== "sand");
+export const MAX_VOCAB_DEFINITION_LENGTH = 500;
 
 export type VocabColumnColorKey = (typeof VOCAB_COLUMN_COLOR_KEYS)[number];
 
@@ -125,7 +126,7 @@ function parseVocabCardValue(value: Partial<VocabCard> | undefined) {
 
     return {
       term,
-      definition: isString(value.definition) ? normalizeVocabField(value.definition) : "",
+      definition: isString(value.definition) ? normalizeVocabDefinition(value.definition) : "",
       audioUrl: isString(value.audioUrl) ? value.audioUrl.trim() : undefined,
     };
   }
@@ -158,13 +159,17 @@ function parseLegacyVocabText(text: string) {
 
   return {
     term: normalizeVocabField(normalized.slice(0, separatorStart)) || normalized,
-    definition: normalizeVocabField(normalized.slice(separatorEnd)),
+    definition: normalizeVocabDefinition(normalized.slice(separatorEnd)),
     audioUrl: undefined,
   };
 }
 
 function normalizeVocabField(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeVocabDefinition(value: string) {
+  return normalizeVocabField(value).slice(0, MAX_VOCAB_DEFINITION_LENGTH);
 }
 
 function isColorKey(value: unknown): value is VocabColumnColorKey {
