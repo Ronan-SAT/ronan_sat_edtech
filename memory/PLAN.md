@@ -291,3 +291,9 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - The auth signup surface and the welcome onboarding page now avoid rendering local `<Loading />` states so the initial boot overlay remains the sole global loader during session resolution.
 - Rich text rendering continues to flow through the shared `utils/renderContent.tsx` entrypoint, but now uses a stricter dollar/LaTeX tokenizer plus contextual normalization so malformed currency-like `$...$` content no longer collapses prose spacing or eats surrounding text.
 - Client cache services now use shared read-through caching with TTL-backed session storage and in-flight request deduplication instead of separate ad hoc cache-hit logic in each service.
+
+### 2026-04-18 Profile Persistence Cleanup
+
+- `username` and `birthDate` are now treated as MongoDB-backed account fields across registration, onboarding, user settings, and auth session hydration rather than as client-side profile data.
+- The frontend no longer has any `localStorage` reads or writes for `username` or `birthDate`; remaining browser storage usage in the repo is for unrelated device-local preferences and cached board/theme state only.
+- Shared user validation now reuses the same username and birthdate rules as the API layer so profile identity rules stay aligned across the codebase.
