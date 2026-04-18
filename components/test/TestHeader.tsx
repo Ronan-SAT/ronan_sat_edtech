@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "antd";
 import { AlertTriangle, Calculator, ChevronDown, CircleX, Clock3, Eye, EyeOff } from "lucide-react";
 
 import { ReportErrorButton } from "@/components/report/ReportErrorButton";
@@ -128,13 +129,14 @@ export default function TestHeader({
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <button
-                type="button"
+              <Button
+                type="default"
+                loading={isSubmitting}
                 disabled={isSubmitting}
-                className={`inline-flex h-11 items-center justify-center px-6 font-bold disabled:cursor-not-allowed disabled:opacity-70 ${submitButtonClass}`}
+                className={`!h-11 !px-6 !font-bold ${submitButtonClass}`}
               >
-                {isSubmitting ? "Submitting..." : submitButtonLabel}
-              </button>
+                {submitButtonLabel}
+              </Button>
             </AlertDialogTrigger>
 
             <ConfirmDialogContent

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import PrettyLoading from "@/components/PrettyLoading";
 import SimpleLoading from "@/components/SimpleLoading";
 import { hasSeenInitialTabLoad, isInitialTabBootPending } from "@/lib/initialTabLoad";
 
 export default function AppRouteLoading() {
-  const [shouldShowPrettyLoader] = useState(
-    () => !hasSeenInitialTabLoad() || isInitialTabBootPending(),
-  );
+  const [shouldShowPrettyLoader, setShouldShowPrettyLoader] = useState(true);
+
+  useEffect(() => {
+    setShouldShowPrettyLoader(!hasSeenInitialTabLoad() || isInitialTabBootPending());
+  }, []);
 
   if (shouldShowPrettyLoader) {
     return <PrettyLoading />;

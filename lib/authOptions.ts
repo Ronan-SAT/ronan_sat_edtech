@@ -108,13 +108,9 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account, trigger, session }) {
       if (trigger === "update") {
-        token.name = typeof session?.name === "string" ? session.name : token.name;
-        token.username = typeof session?.username === "string" ? session.username : token.username;
-        token.birthDate = typeof session?.birthDate === "string" ? session.birthDate : token.birthDate;
-        token.hasCompletedProfile =
-          typeof session?.hasCompletedProfile === "boolean"
-            ? session.hasCompletedProfile
-            : token.hasCompletedProfile;
+        token.username = session?.username ?? token.username;
+        token.birthDate = session?.birthDate ?? token.birthDate;
+        token.hasCompletedProfile = session?.hasCompletedProfile ?? token.hasCompletedProfile;
       }
 
       if (account?.provider === "google") {

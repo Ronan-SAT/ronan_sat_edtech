@@ -13,27 +13,6 @@ type TestFilters = {
   subject?: string | null;
 };
 
-type CachedValue<T> = {
-  value: T;
-  expiresAt: number;
-};
-
-type TestListProjection = {
-  _id: Types.ObjectId;
-  title: string;
-  timeLimit: number;
-  difficulty?: string;
-  sections: Array<{
-    name: string;
-    questionsCount: number;
-    timeLimit: number;
-  }>;
-};
-
-const TEST_LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
-const TEST_LIST_PROJECTION = "_id title timeLimit difficulty sections";
-const availablePeriodsCache = new Map<string, CachedValue<string[]>>();
-
 const MONTH_INDEX: Record<string, number> = {
   january: 1,
   february: 2,
@@ -134,37 +113,15 @@ function sortPeriods(periods: string[]) {
   });
 }
 
-function getAvailablePeriodsCacheKey(filters: TestFilters) {
-  return JSON.stringify({
-    period: filters.period ?? null,
-    subject: filters.subject ?? null,
-  });
-}
-
-export function clearTestLibraryCache() {
-  availablePeriodsCache.clear();
-}
-
 async function getAvailablePeriods(filters: TestFilters) {
-  const cacheKey = getAvailablePeriodsCacheKey(filters);
-  const cached = availablePeriodsCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.value;
-  }
-
   const metadataFilter = buildMongoFilter({
     ...filters,
     period: null,
   });
-  const tests = await Test.find(metadataFilter).select("title").lean<{ title: string }[]>();
-  const periods = ["All", ...sortPeriods(Array.from(new Set(tests.map((test) => getTestPeriodLabel(test.title)))))];
+  const tests = await Test.find(metadataFilter).select("title").lean();
+  const periods = Array.from(new Set(tests.map((test) => getTestPeriodLabel(test.title))));
 
-  availablePeriodsCache.set(cacheKey, {
-    value: periods,
-    expiresAt: Date.now() + TEST_LIBRARY_CACHE_TTL_MS,
-  });
-
-  return periods;
+  return ["All", ...sortPeriods(periods)];
 }
 
 function buildPeriodSortStages(sortOrder: "asc" | "desc"): PipelineStage[] {
@@ -213,11 +170,10 @@ function buildPeriodSortStages(sortOrder: "asc" | "desc"): PipelineStage[] {
     },
     {
       $project: {
-        _id: 1,
-        title: 1,
-        timeLimit: 1,
-        difficulty: 1,
-        sections: 1,
+        __titleParts: 0,
+        __sortMonth: 0,
+        __sortYear: 0,
+        __periodSortValue: 0,
       },
     },
   ];
@@ -240,19 +196,16 @@ async function getPaginatedTests(
       ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : []),
     ];
 
-    return Test.aggregate<TestListProjection>(pipeline);
+    return Test.aggregate(pipeline);
   }
 
-  let query = Test.find(filter)
-    .select(TEST_LIST_PROJECTION)
-    .sort({ title: sortOrder === "asc" ? 1 : -1 })
-    .skip(skip);
+  let query = Test.find(filter).sort({ title: sortOrder === "asc" ? 1 : -1 }).skip(skip);
 
   if (usePagination) {
     query = query.limit(limit);
   }
 
-  return query.lean<TestListProjection[]>();
+  return query.lean();
 }
 
 async function getQuestionCountsForTests(testIds: Types.ObjectId[]) {
@@ -335,16 +288,6 @@ export const testService = {
     return testWithCounts;
   },
 
-  async getAdminTestOptions() {
-    await dbConnect();
-
-    return Test.find({})
-      .select("_id title")
-      .sort({ createdAt: -1, title: 1 })
-      .lean<Array<{ _id: Types.ObjectId; title: string }>>()
-      .then((tests) => tests.map((test) => ({ _id: test._id.toString(), title: test.title })));
-  },
-
   async createTest(data: unknown) {
     try {
       const validatedData: TestInput = TestValidationSchema.parse(data);
@@ -354,9 +297,7 @@ export const testService = {
       }
 
       await dbConnect();
-      const createdTest = await Test.create(validatedData);
-      clearTestLibraryCache();
-      return createdTest;
+      return await Test.create(validatedData);
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const validationError = new Error("Validation Error") as Error & {

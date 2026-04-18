@@ -21,11 +21,6 @@ export function loadAppEnv(mode: AppEnvMode = resolveAppEnvMode()) {
     return;
   }
 
-  if (mode === "production" && !process.env.DOTENV_PRIVATE_KEY_PRODUCTION) {
-    loadedModes.add(mode);
-    return;
-  }
-
   const result = config({
     path: getEnvFiles(mode),
     ignore: ["MISSING_ENV_FILE"],
@@ -34,10 +29,7 @@ export function loadAppEnv(mode: AppEnvMode = resolveAppEnvMode()) {
   });
 
   if (result.error) {
-    const errorWithCode = result.error as Error & { code?: string };
-    if (errorWithCode.code !== "MISSING_PRIVATE_KEY") {
-      throw result.error;
-    }
+    throw result.error;
   }
 
   loadedModes.add(mode);

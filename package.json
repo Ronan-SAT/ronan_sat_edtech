@@ -12,7 +12,7 @@
     "build:next": "next build",
     "start": "dotenvx run -f .env.production --ignore=MISSING_ENV_FILE -- next start",
     "start:secure": "bun run start",
-    "lint": "eslint --no-error-on-unmatched-pattern --no-warn-ignored app components hooks lib types utils",
+    "lint": "eslint --no-error-on-unmatched-pattern --no-warn-ignored app components hooks lib types utils *.ts *.tsx *.js *.mjs",
     "seed": "dotenvx run -f .env.local -f .env.development --ignore=MISSING_ENV_FILE -- tsx seed.ts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
@@ -58,7 +58,7 @@
     "@types/react-dom": "^19.2.3",
     "conventional-changelog-cli": "^5.0.0",
     "dotenv": "^17.4.2",
-    "eslint": "^9.39.4",
+    "eslint": "^10.2.1",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4.2.2",
     "ts-node": "^10.9.2",

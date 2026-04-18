@@ -12,7 +12,7 @@ async function getFixBoardDocument() {
   return FixBoard.findOneAndUpdate(
     { key: FIX_BOARD_KEY },
     { $setOnInsert: { board: emptyFixBoard } },
-    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 }
 
@@ -51,7 +51,7 @@ export async function PUT(req: Request) {
     await FixBoard.findOneAndUpdate(
       { key: FIX_BOARD_KEY },
       { board },
-      { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+      { upsert: true, new: true, setDefaultsOnInsert: true },
     );
 
     return NextResponse.json({ message: "Fix board saved", board }, { status: 200 });

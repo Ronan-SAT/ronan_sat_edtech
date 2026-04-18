@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
-import { clearClientCache } from "@/lib/clientCache";
 import { normalizeSectionName, VERBAL_SECTION } from "@/lib/sections";
 import { CheckCircle, Save, Upload, FileUp, ChevronDown } from "lucide-react";
 
@@ -210,8 +209,6 @@ export default function CreateQuestionForm({ tests }: { tests: TestOption[] }) {
     } else {
         setQuestionMessage(`Success! Saved ${successCount} question(s).`);
         setParsedJSONQuestions([]);
-        clearClientCache("tests:");
-        clearClientCache("api:questions:");
     }
 };
 
@@ -244,8 +241,6 @@ export default function CreateQuestionForm({ tests }: { tests: TestOption[] }) {
 
             if (res.status === 200 || res.status === 201) {
                 setQuestionMessage("Question added successfully!");
-                clearClientCache("tests:");
-                clearClientCache("api:questions:");
                 setQuestionForm({
                     ...questionForm,
                     questionText: "",

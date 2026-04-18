@@ -7,11 +7,11 @@ import { useEffect, useState } from "react";
 import { getSession, signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
 
+import InitialTabBootReady from "@/components/InitialTabBootReady";
 import AuthWorkbookShell from "@/components/auth/AuthWorkbookShell";
 import Loading from "@/components/Loading";
 import { API_PATHS } from "@/lib/apiPaths";
 import api from "@/lib/axios";
-import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
 
 const FIELD_CLASS_NAME = "workbook-input";
 const MESSAGE_CLASS_NAME =
@@ -19,7 +19,7 @@ const MESSAGE_CLASS_NAME =
 
 export default function AuthPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -31,9 +31,9 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(getPostAuthRedirectPath(session?.user));
+      router.replace("/auth/redirect");
     }
-  }, [router, session?.user, status]);
+  }, [router, status]);
 
   if (status === "loading" || status === "authenticated") {
     return <Loading showQuote={false} />;
@@ -66,7 +66,7 @@ export default function AuthPage() {
           return;
         }
 
-        router.replace(getPostAuthRedirectPath(nextSession.user));
+        window.location.assign("/auth/redirect");
         return;
       }
 
@@ -75,8 +75,7 @@ export default function AuthPage() {
       if (response.status >= 200 && response.status < 300) {
         setMessage("Account created. Redirecting into your workbook...");
         await signIn("credentials", { email, password, redirect: false });
-        const nextSession = await getSession();
-        router.replace(getPostAuthRedirectPath(nextSession?.user));
+        window.location.assign("/auth/redirect");
         return;
       }
 
@@ -120,6 +119,7 @@ export default function AuthPage() {
           : "Set up your profile and start the redesigned workbook experience."
       }
     >
+      <InitialTabBootReady />
       {message ? (
         <div className={`${MESSAGE_CLASS_NAME} ${isError ? "bg-accent-3 text-white" : "bg-primary text-ink-fg"}`}>
           {message}

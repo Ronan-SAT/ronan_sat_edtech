@@ -1,11 +1,11 @@
-export type ParentDashboardOverview = {
+export type ParentOverview = {
   highestScore: number;
   testsCompleted: number;
   activityLast30Days: number;
   lastActiveAt: string | null;
 };
 
-export type ScoreHistoryPoint = {
+export type ParentScoreHistoryPoint = {
   id: string;
   dateKey: string;
   label: string;
@@ -15,19 +15,19 @@ export type ScoreHistoryPoint = {
   takenAt: string;
 };
 
-export type TestsPerDayPoint = {
+export type ParentTestsPerDayPoint = {
   dateKey: string;
   label: string;
   tests: number;
 };
 
-export type TimeSpentPerDayPoint = {
+export type ParentTimeSpentPerDayPoint = {
   dateKey: string;
   label: string;
   minutes: number;
 };
 
-export type RecentTestItem = {
+export type ParentRecentTestItem = {
   id: string;
   testName: string;
   takenAt: string;
@@ -38,17 +38,18 @@ export type RecentTestItem = {
   totalScore: number;
 };
 
-export type ParentDashboardData = {
+export type ParentDashboardResponse = {
   hasChildren: boolean;
   child: {
     id: string;
     name: string;
     email: string;
   } | null;
-  overview: ParentDashboardOverview;
+  overview: ParentOverview;
   timeSpentByWindow: Record<string, number>;
-  scoreHistory: ScoreHistoryPoint[];
-  testsPerDay: Record<string, TestsPerDayPoint[]>;
-  timeSpentPerDay: Record<string, TimeSpentPerDayPoint[]>;
-  recentTests: RecentTestItem[];
+  scoreHistory: ParentScoreHistoryPoint[];
+  testsPerDay: Record<string, ParentTestsPerDayPoint[]>;
+  timeSpentPerDay: Record<string, ParentTimeSpentPerDayPoint[]>;
+  recentTests: ParentRecentTestItem[];
+  error?: string;
 };

@@ -1,74 +1,163 @@
-"use client";
-
 import { getClientCache, setClientCache } from "@/lib/clientCache";
+import { API_PATHS } from "@/lib/apiPaths";
+import api from "@/lib/axios";
+import type { Role } from "@/lib/permissions";
 import { fetchDashboardUserResults, fetchDashboardUserStats, fetchLeaderboard } from "@/lib/services/dashboardService";
 import { fetchReviewResults } from "@/lib/services/reviewService";
 import { fetchTestsPage, getTestsClientCacheKey } from "@/lib/services/testLibraryService";
-import type { Role } from "@/lib/permissions";
-import type { CachedTestsPayload } from "@/types/testLibrary";
+import type { ParentDashboardResponse } from "@/types/parentDashboard";
+import type { ReviewResult } from "@/types/review";
+import type { CachedTestsPayload, LeaderboardEntry, UserResultSummary, UserStatsSummary } from "@/types/testLibrary";
+
+const DASHBOARD_STATS_CACHE_KEY = "dashboard:stats";
+const DASHBOARD_STATS_API_CACHE_KEY = "api:dashboard:stats";
+const DASHBOARD_RESULTS_CACHE_KEY = "dashboard:results:30";
+const DASHBOARD_RESULTS_API_CACHE_KEY = "api:dashboard:results:30";
+const DASHBOARD_LEADERBOARD_CACHE_KEY = "dashboard:leaderboard";
+const DASHBOARD_LEADERBOARD_API_CACHE_KEY = "api:dashboard:leaderboard";
+const DASHBOARD_USER_RESULTS_CACHE_KEY = "dashboard:user-results";
+const DASHBOARD_USER_RESULTS_API_CACHE_KEY = "api:dashboard:results:all";
+const REVIEW_RESULTS_CACHE_KEY = "review:results";
+const PARENT_DASHBOARD_CACHE_KEY = "parent:dashboard";
+
+const FULL_LENGTH_CACHE_KEY = getTestsClientCacheKey(1, 15, "newest", { selectedPeriod: "All" });
+const SECTIONAL_READING_CACHE_KEY = getTestsClientCacheKey(1, 15, "newest", {
+  selectedPeriod: "All",
+  subject: "reading",
+});
+const SECTIONAL_MATH_CACHE_KEY = getTestsClientCacheKey(1, 15, "newest", {
+  selectedPeriod: "All",
+  subject: "math",
+});
 
 const preloadJobs = new Map<string, Promise<void>>();
-const PARENT_DASHBOARD_CACHE_KEY = "parent:dashboard";
 
 type PreloadParams = {
   role: Role;
   userId: string;
 };
 
-function getWarmTestsPayloadCacheKey(subject?: "reading" | "math") {
-  return getTestsClientCacheKey(1, 15, "newest", {
-    selectedPeriod: "All",
-    subject,
-  });
+function syncMirroredCache<T>(primaryKey: string, mirrorKey: string) {
+  const primaryValue = getClientCache<T>(primaryKey);
+  const mirrorValue = getClientCache<T>(mirrorKey);
+
+  if (primaryValue === undefined && mirrorValue !== undefined) {
+    setClientCache(primaryKey, mirrorValue);
+    return mirrorValue;
+  }
+
+  if (primaryValue !== undefined && mirrorValue === undefined) {
+    setClientCache(mirrorKey, primaryValue);
+  }
+
+  return primaryValue;
 }
 
-async function warmTestsPage(subject?: "reading" | "math") {
-  const cacheKey = getWarmTestsPayloadCacheKey(subject);
+function warmTestsPage(cacheKey: string, subject?: "reading" | "math") {
   const cachedPayload = getClientCache<CachedTestsPayload>(cacheKey);
   if (cachedPayload !== undefined) {
-    return;
+    return Promise.resolve();
   }
 
-  const payload = await fetchTestsPage(1, 15, "newest", {
+  return fetchTestsPage(1, 15, "newest", {
     selectedPeriod: "All",
     subject,
+  }).then((payload) => {
+    setClientCache(cacheKey, payload);
   });
-  setClientCache(cacheKey, payload);
 }
 
-async function warmParentDashboard() {
-  if (getClientCache(PARENT_DASHBOARD_CACHE_KEY) !== undefined) {
-    return;
+function warmDashboardStats() {
+  const cachedStats = syncMirroredCache<UserStatsSummary>(DASHBOARD_STATS_CACHE_KEY, DASHBOARD_STATS_API_CACHE_KEY);
+  if (cachedStats !== undefined) {
+    return Promise.resolve();
   }
 
-  const response = await fetch("/api/parent/dashboard", {
-    method: "GET",
-    credentials: "same-origin",
+  return fetchDashboardUserStats().then((stats) => {
+    setClientCache(DASHBOARD_STATS_CACHE_KEY, stats);
   });
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to preload parent dashboard: ${response.status}`);
+function warmDashboardResults(days: 30) {
+  const cachedResults = syncMirroredCache<UserResultSummary[]>(
+    DASHBOARD_RESULTS_CACHE_KEY,
+    DASHBOARD_RESULTS_API_CACHE_KEY,
+  );
+  if (cachedResults !== undefined) {
+    return Promise.resolve();
   }
 
-  const payload = (await response.json()) as unknown;
-  setClientCache(PARENT_DASHBOARD_CACHE_KEY, payload);
+  return fetchDashboardUserResults(days).then((results) => {
+    setClientCache(DASHBOARD_RESULTS_CACHE_KEY, results);
+  });
+}
+
+function warmDashboardLeaderboard() {
+  const cachedLeaderboard = syncMirroredCache<LeaderboardEntry[]>(
+    DASHBOARD_LEADERBOARD_CACHE_KEY,
+    DASHBOARD_LEADERBOARD_API_CACHE_KEY,
+  );
+  if (cachedLeaderboard !== undefined) {
+    return Promise.resolve();
+  }
+
+  return fetchLeaderboard().then((leaderboard) => {
+    setClientCache(DASHBOARD_LEADERBOARD_CACHE_KEY, leaderboard);
+  });
+}
+
+function warmDashboardUserResults() {
+  const cachedResults = syncMirroredCache<UserResultSummary[]>(
+    DASHBOARD_USER_RESULTS_CACHE_KEY,
+    DASHBOARD_USER_RESULTS_API_CACHE_KEY,
+  );
+  if (cachedResults !== undefined) {
+    return Promise.resolve();
+  }
+
+  return fetchDashboardUserResults().then((results) => {
+    setClientCache(DASHBOARD_USER_RESULTS_CACHE_KEY, results);
+  });
+}
+
+function warmReviewResults() {
+  const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY);
+  if (cachedResults !== undefined) {
+    return Promise.resolve();
+  }
+
+  return fetchReviewResults().then((results) => {
+    setClientCache(REVIEW_RESULTS_CACHE_KEY, results);
+  });
+}
+
+function warmParentDashboard() {
+  const cachedDashboard = getClientCache<ParentDashboardResponse>(PARENT_DASHBOARD_CACHE_KEY);
+  if (cachedDashboard !== undefined) {
+    return Promise.resolve();
+  }
+
+  return api.get(API_PATHS.PARENT_DASHBOARD).then((response) => {
+    const payload = response.data as ParentDashboardResponse;
+    setClientCache(PARENT_DASHBOARD_CACHE_KEY, payload);
+  });
 }
 
 async function preloadStudentAppData() {
   await Promise.allSettled([
-    fetchDashboardUserStats(),
-    fetchDashboardUserResults(30),
-    fetchDashboardUserResults(),
-    fetchLeaderboard(),
-    warmTestsPage(),
-    warmTestsPage("reading"),
-    warmTestsPage("math"),
-    fetchReviewResults(),
+    warmDashboardStats(),
+    warmDashboardResults(30),
+    warmDashboardLeaderboard(),
+    warmDashboardUserResults(),
+    warmTestsPage(FULL_LENGTH_CACHE_KEY),
+    warmTestsPage(SECTIONAL_READING_CACHE_KEY, "reading"),
+    warmTestsPage(SECTIONAL_MATH_CACHE_KEY, "math"),
+    warmReviewResults(),
   ]);
 }
 
 async function preloadParentAppData() {
-  await Promise.allSettled([warmParentDashboard(), fetchLeaderboard()]);
+  await Promise.allSettled([warmParentDashboard(), warmDashboardLeaderboard()]);
 }
 
 export function preloadInitialAppData({ role, userId }: PreloadParams) {
@@ -78,17 +167,15 @@ export function preloadInitialAppData({ role, userId }: PreloadParams) {
     return existingJob;
   }
 
-  const nextJob = (async () => {
+  const job = (async () => {
     if (role === "PARENT") {
       await preloadParentAppData();
       return;
     }
 
     await preloadStudentAppData();
-  })().finally(() => {
-    preloadJobs.delete(preloadKey);
-  });
+  })();
 
-  preloadJobs.set(preloadKey, nextJob);
-  return nextJob;
+  preloadJobs.set(preloadKey, job);
+  return job;
 }

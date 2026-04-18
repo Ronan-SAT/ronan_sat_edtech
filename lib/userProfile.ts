@@ -56,16 +56,5 @@ export function hasCompletedStudentProfile(profile: {
   username?: string | null;
   birthDate?: string | null;
 }) {
-  if (profile.role !== "STUDENT") {
-    return true;
-  }
-
   return Boolean(profile.username && profile.birthDate);
-}
-
-export function isStudentProfileIncomplete(profile: {
-  role?: string | null;
-  hasCompletedProfile?: boolean | null;
-}) {
-  return profile.role === "STUDENT" && !profile.hasCompletedProfile;
 }

@@ -2,25 +2,13 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
-import { setClientCache } from "@/lib/clientCache";
-import {
-  fetchVocabBoardFromServer,
-  getVocabBoardServerCacheKey,
-  getVocabBoardStorageKey,
-  persistVocabBoardToServer,
-  readVocabBoardFromLocalStorage,
-  VOCAB_BOARD_CACHE_TTL_MS,
-} from "@/lib/services/vocabBoardClientService";
+import { API_PATHS } from "@/lib/apiPaths";
 import { parseDraftToCardFields } from "@/components/vocab/flashCardUtils";
 import {
-  addVocabCardToBoard,
   emptyVocabBoard,
   isVocabBoardEmpty,
   normalizeVocabBoard,
-  moveVocabCardBetweenBuckets,
-  normalizeVocabText,
   DEFAULT_VOCAB_COLUMN_COLOR_KEYS,
-  VOCAB_COLUMN_COLOR_KEYS,
   MAX_VOCAB_DEFINITION_LENGTH,
   type VocabBoardState,
   type VocabColumnColorKey,
@@ -50,6 +38,20 @@ type VocabBoardContextValue = {
 
 const VocabBoardContext = createContext<VocabBoardContextValue | null>(null);
 
+async function persistBoardToServer(nextBoard: VocabBoardState) {
+  const response = await fetch(API_PATHS.USER_VOCAB_BOARD, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ board: nextBoard }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to save vocab board: ${response.status}`);
+  }
+}
+
 export function VocabBoardProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const idRef = useRef(0);
@@ -58,19 +60,9 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   const storageKey = useMemo(() => {
-    return getVocabBoardStorageKey({
-      userEmail: session?.user?.email,
-      userId: session?.user?.id,
-    });
+    const userKey = session?.user?.email || session?.user?.id || "guest";
+    return `ronan-sat-vocab-board:${userKey}`;
   }, [session?.user?.email, session?.user?.id]);
-  const serverCacheKey = useMemo(
-    () =>
-      getVocabBoardServerCacheKey({
-        userEmail: session?.user?.email,
-        userId: session?.user?.id,
-      }),
-    [session?.user?.email, session?.user?.id],
-  );
 
   const isAuthenticated = status === "authenticated";
 
@@ -85,7 +77,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       setHydrated(false);
 
       if (!isAuthenticated) {
-        const localBoard = readVocabBoardFromLocalStorage(storageKey);
+        const localBoard = readBoardFromLocalStorage(storageKey);
         if (!cancelled) {
           setBoard(localBoard);
           lastPersistedRef.current = JSON.stringify(localBoard);
@@ -95,8 +87,18 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const serverBoard = await fetchVocabBoardFromServer(serverCacheKey);
-        const localBoard = readVocabBoardFromLocalStorage(storageKey);
+        const response = await fetch(API_PATHS.USER_VOCAB_BOARD, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load vocab board: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as { board?: unknown };
+        const serverBoard = normalizeVocabBoard(payload.board);
+        const localBoard = readBoardFromLocalStorage(storageKey);
         const nextBoard = isVocabBoardEmpty(serverBoard) && !isVocabBoardEmpty(localBoard) ? localBoard : serverBoard;
 
         if (!cancelled) {
@@ -106,13 +108,12 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
         }
 
         if (nextBoard === localBoard) {
-          await persistVocabBoardToServer(nextBoard);
-          setClientCache(serverCacheKey, nextBoard, VOCAB_BOARD_CACHE_TTL_MS);
+          await persistBoardToServer(nextBoard);
           window.localStorage.removeItem(storageKey);
         }
       } catch (error) {
         console.error("Failed to hydrate vocab board from server:", error);
-        const localBoard = readVocabBoardFromLocalStorage(storageKey);
+        const localBoard = readBoardFromLocalStorage(storageKey);
         if (!cancelled) {
           setBoard(localBoard);
           lastPersistedRef.current = JSON.stringify(localBoard);
@@ -126,7 +127,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, serverCacheKey, status, storageKey]);
+  }, [isAuthenticated, status, storageKey]);
 
   useEffect(() => {
     if (!hydrated || status === "loading" || typeof window === "undefined") {
@@ -145,10 +146,9 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
     }
 
     const timeoutId = window.setTimeout(() => {
-      void persistVocabBoardToServer(board)
+      void persistBoardToServer(board)
         .then(() => {
           lastPersistedRef.current = serializedBoard;
-          setClientCache(serverCacheKey, board, VOCAB_BOARD_CACHE_TTL_MS);
         })
         .catch((error) => {
           console.error("Failed to persist vocab board:", error);
@@ -156,7 +156,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
     }, 500);
 
     return () => window.clearTimeout(timeoutId);
-  }, [board, hydrated, isAuthenticated, serverCacheKey, status, storageKey]);
+  }, [board, hydrated, isAuthenticated, status, storageKey]);
 
   const value = useMemo<VocabBoardContextValue>(
     () => ({
@@ -248,7 +248,7 @@ export function VocabBoardProvider({ children }: { children: ReactNode }) {
         return columnId;
       },
       moveCard: (cardId, destination) => {
-        setBoard((previous) => moveVocabCardBetweenBuckets(previous, cardId, destination));
+        setBoard((previous) => moveCardBetweenBuckets(previous, cardId, destination));
       },
       updateCard: (cardId, nextCard) => {
         const normalizedTerm = normalizeText(nextCard.term);
@@ -413,10 +413,6 @@ function normalizeText(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
-export function useOptionalVocabBoard() {
-  return useContext(VocabBoardContext);
-}
-
 function normalizeDefinition(text: string) {
   return normalizeText(text).slice(0, MAX_VOCAB_DEFINITION_LENGTH);
 }
@@ -424,4 +420,13 @@ function normalizeDefinition(text: string) {
 function createUniqueId(prefix: string, idRef: React.MutableRefObject<number>) {
   idRef.current += 1;
   return `${prefix}-${Date.now()}-${idRef.current}`;
+}
+
+function readBoardFromLocalStorage(storageKey: string) {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    return raw ? normalizeVocabBoard(JSON.parse(raw)) : emptyVocabBoard;
+  } catch {
+    return emptyVocabBoard;
+  }
 }

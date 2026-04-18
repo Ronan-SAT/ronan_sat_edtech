@@ -13,7 +13,7 @@ function getDisplayDate(result: UserResultSummary) {
     return "No date";
   }
 
-  return new Date(rawDate).toLocaleDateString("en-US", {
+  return new Date(rawDate).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",

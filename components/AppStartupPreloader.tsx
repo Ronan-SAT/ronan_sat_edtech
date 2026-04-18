@@ -5,11 +5,15 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import { preloadInitialAppData } from "@/lib/startupPreload";
-import { isStudentProfileIncomplete } from "@/lib/userProfile";
 
 const BLOCKED_PRELOAD_PREFIXES = ["/auth", "/test/"];
+const BLOCKED_PRELOAD_ROUTES = new Set(["/welcome"]);
 
 function canPreloadForPath(pathname: string) {
+  if (BLOCKED_PRELOAD_ROUTES.has(pathname)) {
+    return false;
+  }
+
   return !BLOCKED_PRELOAD_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -18,11 +22,11 @@ export default function AppStartupPreloader() {
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user?.id) {
+    if (status === "loading") {
       return;
     }
 
-    if (isStudentProfileIncomplete(session.user)) {
+    if (status !== "authenticated" || !session?.user?.id || !session.user.hasCompletedProfile) {
       return;
     }
 
@@ -33,10 +37,8 @@ export default function AppStartupPreloader() {
     void preloadInitialAppData({
       role: session.user.role,
       userId: session.user.id,
-    }).catch((error) => {
-      console.error("App startup preload failed", error);
     });
-  }, [pathname, session?.user, session?.user?.id, session?.user?.role, status]);
+  }, [pathname, session?.user?.hasCompletedProfile, session?.user?.id, session?.user?.role, status]);
 
   return null;
 }

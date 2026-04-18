@@ -1,27 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 
 import { getClientCache, setClientCache } from "@/lib/clientCache";
-import { fetchTestsPage, getTestsClientCacheKey } from "@/lib/services/testLibraryService";
+import { fetchDashboardUserResults } from "@/lib/services/dashboardService";
+import { preloadInitialAppData } from "@/lib/startupPreload";
+import {
+  fetchTestsPage,
+  getTestsClientCacheKey,
+} from "@/lib/services/testLibraryService";
 import type { CachedTestsPayload, SortOption, TestListItem, UserResultSummary } from "@/types/testLibrary";
 
-import { fetchDashboardUserResults } from "@/lib/services/dashboardService";
-
 export function useSectionalTestsController() {
+  const { data: session, status } = useSession();
   const pageSize = 15;
+  const CACHE_USER_RESULTS = "dashboard:user-results";
   const initialTestsCacheRef = useRef<CachedTestsPayload | undefined>(undefined);
   const [hasHydratedClientCache, setHasHydratedClientCache] = useState(false);
   const [tests, setTests] = useState<TestListItem[]>([]);
   const [uniquePeriods, setUniquePeriods] = useState<string[]>(["All"]);
   const [loading, setLoading] = useState(true);
   const [testsRefreshing, setTestsRefreshing] = useState(false);
+  const [userResults, setUserResults] = useState<UserResultSummary[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>("newest");
   const [page, setPage] = useState(1);
   const [selectedPeriod, setSelectedPeriod] = useState("All");
   const [moduleFilter, setModuleFilter] = useState<"reading" | "math">("reading");
   const [totalPages, setTotalPages] = useState(1);
-  const [userResults, setUserResults] = useState<UserResultSummary[]>([]);
 
   const hasCachedSectionalView = hasHydratedClientCache && Boolean(initialTestsCacheRef.current);
 
@@ -50,6 +56,55 @@ export function useSectionalTestsController() {
   }, [moduleFilter]);
 
   useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUserResults = async () => {
+      await preloadInitialAppData({
+        role: session.user.role,
+        userId: session.user.id,
+      });
+
+      if (cancelled) {
+        return;
+      }
+
+      const cachedResults = getClientCache<UserResultSummary[]>(CACHE_USER_RESULTS);
+
+      if (cachedResults !== undefined) {
+        if (!cancelled) {
+          setUserResults(cachedResults);
+        }
+        return;
+      }
+
+      try {
+        const nextResults = await fetchDashboardUserResults();
+
+        if (cancelled) {
+          return;
+        }
+
+        setClientCache(CACHE_USER_RESULTS, nextResults);
+        setUserResults(nextResults);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load results", error);
+        }
+      }
+    };
+
+    void loadUserResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
+  useEffect(() => {
     if (page > totalPages && totalPages > 0) {
       setPage(totalPages);
     }
@@ -63,6 +118,17 @@ export function useSectionalTestsController() {
     let cancelled = false;
 
     const loadTests = async () => {
+      if (session?.user?.id) {
+        await preloadInitialAppData({
+          role: session.user.role,
+          userId: session.user.id,
+        });
+
+        if (cancelled) {
+          return;
+        }
+      }
+
       const filters = {
         selectedPeriod,
         subject: moduleFilter,
@@ -75,12 +141,11 @@ export function useSectionalTestsController() {
         setUniquePeriods(cachedTests.availablePeriods);
         setTotalPages(cachedTests.totalPages);
         setLoading(false);
+        setTestsRefreshing(true);
+      } else {
+        setLoading(true);
         setTestsRefreshing(false);
-        return;
       }
-
-      setLoading(true);
-      setTestsRefreshing(false);
 
       try {
         const nextPayload = await fetchTestsPage(page, pageSize, sortOption, filters);
@@ -108,15 +173,10 @@ export function useSectionalTestsController() {
     return () => {
       cancelled = true;
     };
-  }, [hasHydratedClientCache, page, pageSize, selectedPeriod, sortOption, moduleFilter]);
-
-  useEffect(() => {
-    fetchDashboardUserResults(30).then((res) => {
-      setUserResults(res);
-    });
-  }, []);
+  }, [hasHydratedClientCache, moduleFilter, page, pageSize, selectedPeriod, session?.user?.id, session?.user?.role, sortOption]);
 
   return {
+    status,
     hasCachedSectionalView,
     loading,
     testsRefreshing,

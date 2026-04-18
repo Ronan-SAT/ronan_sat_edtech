@@ -26,12 +26,6 @@ export type VocabBoardState = {
   cards: Record<string, VocabCard>;
 };
 
-export type AddVocabCardResult = {
-  board: VocabBoardState;
-  added: boolean;
-  changed: boolean;
-};
-
 export const emptyVocabBoard: VocabBoardState = {
   inboxIds: [],
   columns: [],
@@ -113,110 +107,6 @@ export function normalizeVocabBoard(raw: unknown): VocabBoardState {
 
 export function isVocabBoardEmpty(board: VocabBoardState) {
   return board.inboxIds.length === 0 && board.columns.length === 0 && Object.keys(board.cards).length === 0;
-}
-
-export function addVocabCardToBoard(
-  board: VocabBoardState,
-  text: string,
-  options?: {
-    sourceQuestionId?: string;
-    destination?: string;
-    idFactory?: () => string;
-    createdAt?: string;
-  },
-): AddVocabCardResult {
-  const normalizedText = normalizeVocabText(text);
-  if (!normalizedText) {
-    return {
-      board,
-      added: false,
-      changed: false,
-    };
-  }
-
-  const destination = options?.destination ?? "inbox";
-  const duplicateId = findDuplicateVocabCardId(board, normalizedText);
-  if (duplicateId) {
-    const nextBoard = moveVocabCardBetweenBuckets(board, duplicateId, destination);
-    return {
-      board: nextBoard,
-      added: false,
-      changed: nextBoard !== board,
-    };
-  }
-
-  const id = options?.idFactory?.() ?? `vocab-${Date.now()}`;
-  const nextBoard: VocabBoardState = {
-    ...board,
-    cards: {
-      ...board.cards,
-      [id]: {
-        id,
-        term: normalizedText,
-        definition: "",
-        createdAt: options?.createdAt ?? new Date().toISOString(),
-        sourceQuestionId: options?.sourceQuestionId,
-      },
-    },
-    inboxIds: [...board.inboxIds, id],
-    columns: board.columns,
-  };
-
-  return {
-    board: moveVocabCardBetweenBuckets(nextBoard, id, destination),
-    added: true,
-    changed: true,
-  };
-}
-
-export function moveVocabCardBetweenBuckets(board: VocabBoardState, cardId: string, destination: string) {
-  if (!board.cards[cardId]) {
-    return board;
-  }
-
-  const nextBoard: VocabBoardState = {
-    ...board,
-    inboxIds: board.inboxIds.filter((id) => id !== cardId),
-    columns: board.columns.map((column) => ({
-      ...column,
-      cardIds: column.cardIds.filter((id) => id !== cardId),
-    })),
-  };
-
-  if (destination === "inbox") {
-    if (nextBoard.inboxIds.includes(cardId)) {
-      return board;
-    }
-
-    return {
-      ...nextBoard,
-      inboxIds: [...nextBoard.inboxIds, cardId],
-    };
-  }
-
-  const destinationColumn = nextBoard.columns.find((column) => column.id === destination);
-  if (!destinationColumn) {
-    return board;
-  }
-
-  if (destinationColumn.cardIds.includes(cardId)) {
-    return board;
-  }
-
-  return {
-    ...nextBoard,
-    columns: nextBoard.columns.map((column) =>
-      column.id === destination ? { ...column, cardIds: [...column.cardIds, cardId] } : column,
-    ),
-  };
-}
-
-export function findDuplicateVocabCardId(board: VocabBoardState, normalizedText: string) {
-  return Object.values(board.cards).find((card) => normalizeVocabText(card.term).toLowerCase() === normalizedText.toLowerCase())?.id;
-}
-
-export function normalizeVocabText(text: string) {
-  return text.replace(/\s+/g, " ").trim();
 }
 
 function isString(value: unknown): value is string {

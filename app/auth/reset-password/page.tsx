@@ -5,15 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 
+import InitialTabBootReady from "@/components/InitialTabBootReady";
 import AuthWorkbookShell from "@/components/auth/AuthWorkbookShell";
 import Loading from "@/components/Loading";
-import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
 
 type MessageTone = "success" | "error";
 
 function ResetPasswordForm() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const code = searchParams.get("code");
@@ -26,9 +26,9 @@ function ResetPasswordForm() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(getPostAuthRedirectPath(session?.user));
+      router.replace("/auth/redirect");
     }
-  }, [router, session?.user, status]);
+  }, [router, status]);
 
   if (status === "loading" || status === "authenticated") {
     return <Loading showQuote={false} />;
@@ -81,6 +81,7 @@ function ResetPasswordForm() {
       backHref="/auth/forgot-password"
       backLabel="Back to code request"
     >
+      <InitialTabBootReady />
       {message ? (
         <div
           className={`mb-5 rounded-2xl border-2 border-ink-fg px-4 py-3 text-sm font-medium leading-6 ${

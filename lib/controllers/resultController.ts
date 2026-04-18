@@ -58,9 +58,8 @@ export const resultController = {
       const url = new URL(req.url);
       const daysQuery = url.searchParams.get("days");
       const days = daysQuery ? parseInt(daysQuery, 10) : undefined;
-      const view = url.searchParams.get("view") === "summary" ? "summary" : "detail";
 
-      const data = await resultService.getUserResults(session.user.id, { days, view });
+      const data = await resultService.getUserResults(session.user.id, days);
       return NextResponse.json(data);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to fetch results";

@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { API_PATHS } from "@/lib/apiPaths";
-import { readThroughClientCache, setClientCache } from "@/lib/clientCache";
 import {
   emptyFixBoard,
   FIX_COLUMN_COLOR_KEYS,
@@ -27,8 +26,6 @@ type FixBoardContextValue = {
 };
 
 const FixBoardContext = createContext<FixBoardContextValue | null>(null);
-const FIX_BOARD_CACHE_KEY = "fix-board:global";
-const FIX_BOARD_CACHE_TTL_MS = 30 * 1000;
 
 async function persistBoardToServer(nextBoard: FixBoardState) {
   const response = await fetch(API_PATHS.FIX_BOARD, {
@@ -44,26 +41,6 @@ async function persistBoardToServer(nextBoard: FixBoardState) {
   }
 }
 
-async function fetchFixBoardFromServer() {
-  return readThroughClientCache(
-    FIX_BOARD_CACHE_KEY,
-    async () => {
-      const response = await fetch(API_PATHS.FIX_BOARD, {
-        method: "GET",
-        cache: "no-store",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to load fix board: ${response.status}`);
-      }
-
-      const payload = (await response.json()) as { board?: unknown };
-      return normalizeFixBoard(payload.board);
-    },
-    { ttlMs: FIX_BOARD_CACHE_TTL_MS },
-  );
-}
-
 export function FixBoardProvider({ children }: { children: ReactNode }) {
   const idRef = useRef(0);
   const lastPersistedRef = useRef("");
@@ -77,7 +54,17 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
       setHydrated(false);
 
       try {
-        const nextBoard = await fetchFixBoardFromServer();
+        const response = await fetch(API_PATHS.FIX_BOARD, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load fix board: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as { board?: unknown };
+        const nextBoard = normalizeFixBoard(payload.board);
 
         if (!cancelled) {
           setBoard(nextBoard);
@@ -115,7 +102,6 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
       void persistBoardToServer(board)
         .then(() => {
           lastPersistedRef.current = serializedBoard;
-          setClientCache(FIX_BOARD_CACHE_KEY, board, FIX_BOARD_CACHE_TTL_MS);
         })
         .catch((error) => {
           console.error("Failed to persist fix board:", error);

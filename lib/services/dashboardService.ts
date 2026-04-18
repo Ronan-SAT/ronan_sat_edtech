@@ -1,64 +1,106 @@
+import { getClientCache, setClientCache } from "@/lib/clientCache";
 import { API_PATHS } from "@/lib/apiPaths";
 import api from "@/lib/axios";
-import { readThroughClientCache } from "@/lib/clientCache";
 import type { LeaderboardEntry, UserResultSummary, UserStatsSummary } from "@/types/testLibrary";
 
+/** Shared options accepted by every service function in this module. */
 interface FetchOptions {
+  /** When true, skip the cache and always hit the network. */
   forceRefresh?: boolean;
-  view?: "summary" | "detail";
 }
 
+// ---------------------------------------------------------------------------
+// fetchDashboardUserResults
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the current user's result history for the given time window.
+ *
+ * The cache key includes the `days` parameter so results for different windows
+ * are stored independently and never collide.
+ */
 export async function fetchDashboardUserResults(
   days?: number,
   options?: FetchOptions,
 ): Promise<UserResultSummary[]> {
-  const view = options?.view ?? "summary";
-  const cacheKey = `api:dashboard:results:${days ?? "all"}:${view}`;
+  const cacheKey = `api:dashboard:results:${days ?? "all"}`;
 
-  return readThroughClientCache(
-    cacheKey,
-    async () => {
-      const query = new URLSearchParams({ view });
-      if (typeof days === "number") {
-        query.set("days", String(days));
-      }
+  // Cache hit — return immediately without a network call.
+  if (!options?.forceRefresh) {
+    const cached = getClientCache<UserResultSummary[]>(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
 
-      const res = await api.get(`${API_PATHS.RESULTS}?${query.toString()}`);
-      return (res.data.results || []) as UserResultSummary[];
-    },
-    { forceRefresh: options?.forceRefresh },
-  );
+  // Cache miss or forced refresh — fetch from the API.
+  const query = typeof days === "number" ? `?days=${days}` : "";
+  const res = await api.get(`${API_PATHS.RESULTS}${query}`);
+  const results = (res.data.results || []) as UserResultSummary[];
+
+  // Only cache a successful, non-empty-by-error response.
+  setClientCache(cacheKey, results);
+
+  return results;
 }
 
+// ---------------------------------------------------------------------------
+// fetchDashboardUserStats
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the current user's aggregate stats (tests taken, highest score).
+ */
 export async function fetchDashboardUserStats(
   options?: FetchOptions,
 ): Promise<UserStatsSummary> {
   const cacheKey = "api:dashboard:stats";
 
-  return readThroughClientCache(
-    cacheKey,
-    async () => {
-      const res = await api.get("/api/user/stats");
-      return {
-        testsTaken: (res.data.testsTaken || 0) as number,
-        highestScore: (res.data.highestScore || 0) as number,
-      } satisfies UserStatsSummary;
-    },
-    { forceRefresh: options?.forceRefresh },
-  );
+  // Cache hit — return immediately without a network call.
+  if (!options?.forceRefresh) {
+    const cached = getClientCache<UserStatsSummary>(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
+
+  // Cache miss or forced refresh — fetch from the API.
+  const res = await api.get("/api/user/stats");
+  const stats = {
+    testsTaken: (res.data.testsTaken || 0) as number,
+    highestScore: (res.data.highestScore || 0) as number,
+  } satisfies UserStatsSummary;
+
+  setClientCache(cacheKey, stats);
+
+  return stats;
 }
 
+// ---------------------------------------------------------------------------
+// fetchLeaderboard
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the global leaderboard entries.
+ */
 export async function fetchLeaderboard(
   options?: FetchOptions,
 ): Promise<LeaderboardEntry[]> {
   const cacheKey = "api:dashboard:leaderboard";
 
-  return readThroughClientCache(
-    cacheKey,
-    async () => {
-      const res = await api.get("/api/leaderboard");
-      return (res.data.leaderboard || []) as LeaderboardEntry[];
-    },
-    { forceRefresh: options?.forceRefresh },
-  );
+  // Cache hit — return immediately without a network call.
+  if (!options?.forceRefresh) {
+    const cached = getClientCache<LeaderboardEntry[]>(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+  }
+
+  // Cache miss or forced refresh — fetch from the API.
+  const res = await api.get("/api/leaderboard");
+  const leaderboard = (res.data.leaderboard || []) as LeaderboardEntry[];
+
+  setClientCache(cacheKey, leaderboard);
+
+  return leaderboard;
 }

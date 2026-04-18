@@ -5,14 +5,23 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
-import { clearClientCache } from "@/lib/clientCache";
-import { fetchQuestionsByTestId, type TestQuestionPayload } from "@/lib/services/questionClientService";
+import { deleteClientCache } from "@/lib/clientCache";
 import type { QuestionExtra } from "@/lib/questionExtra";
 import { normalizeSectionName, VERBAL_SECTION } from "@/lib/sections";
 import { checkIsCorrect } from "@/utils/gradingHelper";
 import { useTimer } from "./useTimer";
 
-type TestQuestion = TestQuestionPayload & {
+type TestQuestion = {
+  _id: string;
+  section: string;
+  module: number;
+  points?: number;
+  correctAnswer?: string;
+  questionType?: string;
+  sprAnswers?: string[];
+  questionText?: string;
+  passage?: string;
+  choices?: string[];
   extra?: QuestionExtra | null;
 };
 
@@ -22,6 +31,21 @@ export const testStages = [
   { section: "Math", module: 1, duration: 35 * 60 },
   { section: "Math", module: 2, duration: 35 * 60 },
 ];
+
+function clearDashboardCaches() {
+  const cacheKeys = [
+    "dashboard:stats",
+    "dashboard:results:30",
+    "dashboard:leaderboard",
+    "dashboard:user-results",
+    "api:dashboard:stats",
+    "api:dashboard:results:30",
+    "api:dashboard:results:all",
+    "api:dashboard:leaderboard",
+  ];
+
+  cacheKeys.forEach((key) => deleteClientCache(key));
+}
 
 export function useTestEngine(testId: string) {
   const router = useRouter();
@@ -62,8 +86,18 @@ export function useTestEngine(testId: string) {
     const fetchQuestions = async () => {
       setLoading(true);
       try {
-        const fetchedQuestions = await fetchQuestionsByTestId(testId);
-        setQuestions(fetchedQuestions as TestQuestion[]);
+        const res = await api.get(API_PATHS.getQuestionsByTestId(testId), {
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        });
+
+        const fetchedQuestions = (res.data.questions || []).map((question: TestQuestion) => ({
+          ...question,
+          section: normalizeSectionName(question.section),
+        }));
+        setQuestions(fetchedQuestions);
         setCurrentIndex(0);
 
         const validStages = testStages
@@ -178,9 +212,7 @@ export function useTestEngine(testId: string) {
         });
 
         if (res.status === 200 || res.status === 201) {
-          // Invalidate dashboard caches so fresh scores appear on the next visit.
-          clearClientCache("dashboard:");
-          clearClientCache("api:dashboard:");
+          clearDashboardCaches();
           router.push(`/review?testId=${testId}&mode=sectional`);
         }
       } else {
@@ -214,9 +246,7 @@ export function useTestEngine(testId: string) {
         });
 
         if (res.status === 200 || res.status === 201) {
-          // Invalidate dashboard caches so fresh scores appear on the next visit.
-          clearClientCache("dashboard:");
-          clearClientCache("api:dashboard:");
+          clearDashboardCaches();
           router.push(`/review?testId=${testId}&mode=full`);
         }
       }

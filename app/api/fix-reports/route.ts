@@ -25,7 +25,7 @@ async function getFixBoardDocument() {
   return FixBoard.findOneAndUpdate(
     { key: FIX_BOARD_KEY },
     { $setOnInsert: { board: emptyFixBoard } },
-    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 }
 

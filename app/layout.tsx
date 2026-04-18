@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
 import { Bricolage_Grotesque, DM_Sans, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 
 import AppShell from "@/components/AppShell";
 import AppStartupPreloader from "@/components/AppStartupPreloader";
 import AuthProvider from "@/components/AuthProvider";
 import { WorkbookToaster } from "@/components/ui/WorkbookToaster";
-import { authOptions } from "@/lib/authOptions";
+import { VocabBoardProvider } from "@/components/vocab/VocabBoardProvider";
+import { INITIAL_TAB_BOOT_PENDING_KEY, INITIAL_TAB_LOAD_SEEN_KEY } from "@/lib/initialTabLoad";
 import "./globals.css";
 
 const displayFont = Bricolage_Grotesque({
@@ -36,20 +37,31 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await getServerSession(authOptions);
-
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang="en">
       <body className={`${displayFont.variable} ${bodyFont.variable} ${monoFont.variable} antialiased`}>
-        <AuthProvider session={session}>
-          <AppStartupPreloader />
-          <WorkbookToaster />
-          <AppShell>{children}</AppShell>
+        <Script id="initial-tab-load" strategy="beforeInteractive">
+          {`try {
+  var storage = window.sessionStorage;
+  if (storage.getItem(${JSON.stringify(INITIAL_TAB_LOAD_SEEN_KEY)}) !== "1") {
+    storage.setItem(${JSON.stringify(INITIAL_TAB_LOAD_SEEN_KEY)}, "1");
+    storage.setItem(${JSON.stringify(INITIAL_TAB_BOOT_PENDING_KEY)}, "1");
+  }
+} catch (error) {
+  // Ignore storage initialization failures.
+}`}
+        </Script>
+        <AuthProvider>
+          <VocabBoardProvider>
+            <AppStartupPreloader />
+            <WorkbookToaster />
+            <AppShell>{children}</AppShell>
+          </VocabBoardProvider>
         </AuthProvider>
       </body>
     </html>

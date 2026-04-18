@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import PrettyLoading from "@/components/PrettyLoading";
 import SimpleLoading from "@/components/SimpleLoading";
@@ -11,7 +11,11 @@ type LoadingProps = {
 };
 
 export default function Loading({ showQuote = false }: LoadingProps) {
-  const [shouldShowPrettyLoading] = useState(() => isInitialTabBootPending());
+  const [shouldShowPrettyLoading, setShouldShowPrettyLoading] = useState(true);
+
+  useEffect(() => {
+    setShouldShowPrettyLoading(isInitialTabBootPending());
+  }, []);
 
   if (shouldShowPrettyLoading) {
     return <PrettyLoading />;

@@ -3,15 +3,16 @@
 import { CSSProperties, useMemo, useState } from "react";
 import { Bookmark } from "lucide-react";
 
-import QuestionVisualBlock from "@/components/question/QuestionVisualBlock";
-import RichTextWithLatex from "@/components/RichTextWithLatex";
+import QuestionExtraBlock from "@/components/question/QuestionExtraBlock";
 import SelectableTextPanel, { type TextAnnotation } from "@/components/test/SelectableTextPanel";
 import { hasQuestionExtra, type QuestionExtra } from "@/lib/questionExtra";
 import { getTestingRoomThemePreset, type TestingRoomTheme } from "@/lib/testingRoomTheme";
 import { getChoiceCode } from "@/utils/gradingHelper";
-import { hasTallMath } from "@/utils/renderContent";
+import { renderHtmlLatexContent, hasTallMath } from "@/utils/renderContent";
 
 const MAX_SPR_ANSWER_LENGTH = 200;
+
+
 
 type ViewerQuestion = {
   _id: string;
@@ -99,10 +100,10 @@ export default function QuestionViewer({
       return null;
     }
 
-    return <RichTextWithLatex text={question.passage} loosenTallInlineMath />;
+    return renderHtmlLatexContent(question.passage);
   }, [question.passage]);
   const questionTextContent = useMemo(
-    () => <RichTextWithLatex text={question.questionText} loosenTallInlineMath />,
+    () => renderHtmlLatexContent(question.questionText),
     [question.questionText],
   );
 
@@ -149,7 +150,7 @@ export default function QuestionViewer({
       {hasLeftPanel ? (
         <div className={`hidden md:block md:h-full md:w-[var(--left-panel-width)] md:shrink-0 md:overflow-y-auto md:p-10 ${viewerTheme.leftPanelClass}`}>
             {hasRenderableExtra ? (
-              <QuestionVisualBlock
+              <QuestionExtraBlock
                 extra={question.extra}
                 className="mb-4 sm:mb-6"
                 titleClassName={`mb-2 text-center text-[14px] font-normal leading-[1.35] ${readingFontClass} text-ink-fg`}
@@ -197,7 +198,7 @@ export default function QuestionViewer({
         {hasLeftPanel ? (
           <div className={`px-4 pt-4 sm:px-6 md:hidden ${viewerTheme.leftPanelClass}`}>
             {hasRenderableExtra ? (
-              <QuestionVisualBlock
+              <QuestionExtraBlock
                 extra={question.extra}
                 className="mb-4"
                 titleClassName={`mb-2 text-center text-[14px] font-normal leading-[1.35] ${readingFontClass} text-ink-fg`}
@@ -339,7 +340,7 @@ export default function QuestionViewer({
                         }`}
                         sourceQuestionId={question._id}
                       >
-                        <RichTextWithLatex text={choice || ""} loosenTallInlineMath />
+                        {renderHtmlLatexContent(choice || "")}
                       </SelectableTextPanel>
                     </div>
 

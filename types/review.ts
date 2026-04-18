@@ -14,7 +14,6 @@ export type ReviewQuestion = {
   sprAnswers?: string[];
   passage?: string;
   extra?: QuestionExtra | null;
-  imageUrl?: string;
 };
 
 export type ReviewAnswer = {

@@ -6,7 +6,6 @@ import { Plus } from "lucide-react";
 
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
-import { clearClientCache } from "@/lib/clientCache";
 import { VERBAL_SECTION } from "@/lib/sections";
 
 type CreateTestFormState = {
@@ -40,8 +39,6 @@ export default function CreateTestForm({ onSuccess }: { onSuccess: () => void })
       if (res.status === 200 || res.status === 201) {
         setTestMessage("Test created successfully!");
         setTestForm({ title: "" });
-        clearClientCache("tests:");
-        clearClientCache("api:questions:");
         onSuccess();
       } else {
         setTestMessage(`Error: ${String(res.data?.error || "Error creating test.")}`);

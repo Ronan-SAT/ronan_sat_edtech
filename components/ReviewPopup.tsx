@@ -4,15 +4,16 @@ import { useState } from "react";
 import { AlertCircle, BookOpen, Calculator, ChevronDown, ChevronUp, Sparkles, X } from "lucide-react";
 import "katex/dist/katex.min.css";
 
+
 import DesmosCalculator from "@/components/DesmosCalculator";
-import QuestionVisualBlock from "@/components/question/QuestionVisualBlock";
-import RichTextWithLatex from "@/components/RichTextWithLatex";
+import QuestionExtraBlock from "@/components/question/QuestionExtraBlock";
 import ReviewChatbot from "@/components/ReviewChatbot";
 import { ReportErrorButton } from "@/components/report/ReportErrorButton";
 import PassageColumn from "@/components/review/PassageCollumn";
 import AnswerDetails from "@/components/review/AnswerDetails";
 import SelectableTextPanel, { type TextAnnotation } from "@/components/test/SelectableTextPanel";
 import type { ReviewAnswer } from "@/types/review";
+import { renderHtmlLatexContent } from "@/utils/renderContent";
 
 interface ReviewPopupProps {
   ans: ReviewAnswer;
@@ -143,7 +144,7 @@ export default function ReviewPopup({
           <div className={`${q.passage ? "w-1/2" : "mx-auto w-full max-w-4xl"} h-full overflow-y-auto bg-paper-bg`}>
             <div className="flex flex-col gap-5 p-6 lg:p-8">
               {!q.passage ? (
-                <QuestionVisualBlock
+                <QuestionExtraBlock
                   extra={q.extra}
                   className="rounded-2xl border-2 border-ink-fg bg-surface-white p-4 brutal-shadow-sm"
                   titleClassName="mb-2 text-center text-[16px] font-normal leading-[1.35] text-ink-fg font-[Georgia,serif]"
@@ -154,7 +155,7 @@ export default function ReviewPopup({
                 <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">
                   <div className="workbook-sticker bg-primary text-ink-fg">Question</div>
                   <p className="mt-4 text-[17.5px] leading-[1.7] text-ink-fg font-[Georgia,serif]">
-                    <RichTextWithLatex text={q.questionText || ""} loosenTallInlineMath />
+                    {renderHtmlLatexContent(q.questionText || "")}
                   </p>
                 </div>
               </div>
@@ -169,7 +170,7 @@ export default function ReviewPopup({
                   <div className="p-6">
                     {expandedExplanation ? (
                       <p className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink-fg">
-                        <RichTextWithLatex text={expandedExplanation || ""} loosenTallInlineMath />
+                        {renderHtmlLatexContent(expandedExplanation || "")}
                       </p>
                     ) : (
                       <div className="flex items-center gap-2 text-sm text-ink-fg/70">

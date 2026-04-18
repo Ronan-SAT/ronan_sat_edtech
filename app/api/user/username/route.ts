@@ -22,7 +22,7 @@ export async function GET(req: Request) {
   if (!isValidUsername(username)) {
     return NextResponse.json(
       { isAvailable: false, error: USERNAME_REQUIREMENTS },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

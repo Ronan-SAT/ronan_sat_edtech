@@ -5,15 +5,15 @@ import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
+import InitialTabBootReady from "@/components/InitialTabBootReady";
 import AuthWorkbookShell from "@/components/auth/AuthWorkbookShell";
 import Loading from "@/components/Loading";
-import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
 
 type MessageTone = "success" | "error" | "info";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -23,9 +23,9 @@ export default function ForgotPasswordPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(getPostAuthRedirectPath(session?.user));
+      router.replace("/auth/redirect");
     }
-  }, [router, session?.user, status]);
+  }, [router, status]);
 
   if (status === "loading" || status === "authenticated") {
     return <Loading showQuote={false} />;
@@ -83,6 +83,7 @@ export default function ForgotPasswordPage() {
       backHref="/auth"
       backLabel="Back to sign in"
     >
+      <InitialTabBootReady />
       {message ? (
         <div
           className={`mb-5 rounded-2xl border-2 border-ink-fg px-4 py-3 text-sm font-medium leading-6 ${

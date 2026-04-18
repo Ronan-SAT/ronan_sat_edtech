@@ -3,12 +3,12 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Cake, CheckCircle2, LoaderCircle, UserRound } from "lucide-react";
+import { CheckCircle2, Cake, LoaderCircle, UserRound } from "lucide-react";
 
+import InitialTabBootReady from "@/components/InitialTabBootReady";
 import Loading from "@/components/Loading";
 import api from "@/lib/axios";
 import { API_PATHS } from "@/lib/apiPaths";
-import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
 import {
   USERNAME_REQUIREMENTS,
   isValidBirthDate,
@@ -33,25 +33,24 @@ export default function WelcomePage() {
   const hasCompletedProfile = session?.user?.hasCompletedProfile;
 
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.replace("/auth");
-      return;
-    }
-
-    if (status === "authenticated" && session?.user) {
-      if (session.user.role !== "STUDENT") {
-        router.replace(getPostAuthRedirectPath(session.user));
+    if (status === "authenticated" && hasCompletedProfile) {
+      if (session?.user.role === "PARENT") {
+        router.replace("/parent/dashboard");
         return;
       }
 
-      if (hasCompletedProfile) {
-        router.replace("/dashboard");
-      }
+      router.replace("/dashboard");
     }
-  }, [hasCompletedProfile, router, session?.user, status]);
+  }, [hasCompletedProfile, router, session?.user.role, status]);
 
   useEffect(() => {
-    if (status !== "authenticated" || !session?.user) {
+    if (status === "unauthenticated") {
+      router.replace("/auth");
+    }
+  }, [router, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
       return;
     }
 
@@ -75,10 +74,13 @@ export default function WelcomePage() {
         setIsUsernameAvailable(false);
         setIsCheckingUsername(true);
 
-        const response = await fetch(`${API_PATHS.USER_USERNAME}?value=${encodeURIComponent(normalizedUsername)}`, {
-          signal: controller.signal,
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `${API_PATHS.USER_USERNAME}?value=${encodeURIComponent(normalizedUsername)}`,
+          {
+            signal: controller.signal,
+            cache: "no-store",
+          }
+        );
 
         const payload = (await response.json()) as { isAvailable?: boolean; error?: string };
         if (!response.ok) {
@@ -110,9 +112,13 @@ export default function WelcomePage() {
     return () => {
       controller.abort();
     };
-  }, [normalizedUsername, session?.user, status]);
+  }, [normalizedUsername, status]);
 
-  if (status === "loading" || status === "unauthenticated" || !session?.user) {
+  if (status === "loading") {
+    return <Loading showQuote={false} />;
+  }
+
+  if (status === "unauthenticated" || !session?.user) {
     return <Loading showQuote={false} />;
   }
 
@@ -164,6 +170,7 @@ export default function WelcomePage() {
 
   return (
     <div className="min-h-screen bg-paper-bg px-4 py-8 sm:px-6 lg:px-8">
+      <InitialTabBootReady />
       <div className="mx-auto max-w-4xl">
         <section className="workbook-panel-muted overflow-hidden">
           <div className="border-b-4 border-ink-fg bg-paper-bg px-6 py-5">

@@ -1,26 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
 import { getClientCache, setClientCache } from "@/lib/clientCache";
-import { fetchQuestionExplanation } from "@/lib/services/reviewService";
+import { preloadInitialAppData } from "@/lib/startupPreload";
+import { fetchQuestionExplanation, fetchReviewResults } from "@/lib/services/reviewService";
 import type { ReviewAnswer, ReviewResult } from "@/types/review";
 import { filterReviewResultsByType } from "@/components/review/reviewPage.utils";
-
-import { fetchDashboardUserResults } from "@/lib/services/dashboardService";
 
 const REVIEW_RESULTS_CACHE_KEY = "review:results";
 
 export function useReviewPageController() {
+  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const urlMode = searchParams.get("mode");
   const urlTestId = searchParams.get("testId");
   const urlResultId = searchParams.get("resultId");
   const initialResultsCacheRef = useRef<ReviewResult[]>([]);
-  const cachedResults = typeof window !== "undefined" ? getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY) : undefined;
-  const [results, setResults] = useState<ReviewResult[]>(cachedResults ?? []);
-  const [loading, setLoading] = useState(!cachedResults);
+  const [hasHydratedClientCache, setHasHydratedClientCache] = useState(false);
+  const [results, setResults] = useState<ReviewResult[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [testType, setTestType] = useState<"full" | "sectional">(urlMode === "sectional" ? "sectional" : "full");
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
@@ -34,17 +35,86 @@ export function useReviewPageController() {
   const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetchDashboardUserResults(undefined, { view: "detail" }).then((fetchedResults) => {
-      const nextResults = fetchedResults as unknown as ReviewResult[];
-      initialResultsCacheRef.current = nextResults;
-      setResults(nextResults);
-      setLoading(false);
+    const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY) ?? [];
+    initialResultsCacheRef.current = cachedResults;
 
-      if (nextResults.length > 0) {
-        setClientCache(REVIEW_RESULTS_CACHE_KEY, nextResults);
-      }
-    });
+    if (cachedResults.length > 0) {
+      setResults(cachedResults);
+      setLoading(false);
+    }
+
+    setHasHydratedClientCache(true);
   }, []);
+
+  useEffect(() => {
+    if (!hasHydratedClientCache) {
+      return;
+    }
+
+    if (status === "unauthenticated") {
+      window.location.href = "/auth";
+      return;
+    }
+
+    if (status !== "authenticated") {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadResults = async () => {
+      if (session?.user?.id) {
+        await preloadInitialAppData({
+          role: session.user.role,
+          userId: session.user.id,
+        });
+
+        if (cancelled) {
+          return;
+        }
+      }
+
+      const cachedResults = getClientCache<ReviewResult[]>(REVIEW_RESULTS_CACHE_KEY) ?? [];
+
+      if (cachedResults.length > 0) {
+        initialResultsCacheRef.current = cachedResults;
+        setResults(cachedResults);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
+      if (initialResultsCacheRef.current.length > 0) {
+        setLoading(false);
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      try {
+        const data = await fetchReviewResults();
+        if (cancelled) {
+          return;
+        }
+
+        setResults(data);
+        setClientCache(REVIEW_RESULTS_CACHE_KEY, data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    };
+
+    void loadResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasHydratedClientCache, session?.user?.id, session?.user?.role, status]);
 
   const filteredResults = useMemo(() => filterReviewResultsByType(results, testType), [results, testType]);
 
@@ -71,8 +141,8 @@ export function useReviewPageController() {
     }
 
     if (urlTestId && !isManuallySelected) {
-      const matchForUrl = filteredResults.find((result) => {
-        const tId = typeof result.testId === "object" ? result.testId?._id : result.testId;
+      const matchForUrl = filteredResults.find((r) => {
+        const tId = typeof r.testId === "object" ? r.testId?._id : r.testId;
         return tId === urlTestId;
       });
       if (matchForUrl) {
@@ -114,6 +184,7 @@ export function useReviewPageController() {
   };
 
   return {
+    status,
     results,
     loading,
     refreshing,
@@ -124,9 +195,6 @@ export function useReviewPageController() {
     loadingExplanations,
     filteredResults,
     activeTest,
-    setResults,
-    setLoading,
-    setRefreshing,
     setTestType,
     setActiveTestId: (id: string | null) => {
       setIsManuallySelected(true);

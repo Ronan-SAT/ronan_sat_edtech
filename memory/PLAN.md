@@ -225,6 +225,13 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - The feature scope includes per-card practice access, collection-level flashcard practice, and a free dictionary lookup action that can prefill a card definition for later editing.
 - Backward compatibility matters here because persisted boards already exist, so normalization should upgrade legacy `word: meaning` text cards into the new structured shape instead of dropping user data.
 
+### 2026-04-18 Startup Data Warmup
+
+- The root layout now mounts a hidden startup preloader that begins warming authenticated app data as soon as profile-gated routes open.
+- The preload pass fills the same session-storage keys already used by the student dashboard, full-length library, sectional library, review flow, and parent dashboard so those screens can render from warm cache immediately after the initial loading phase.
+- The sectional controller now reuses the shared cached result history instead of always doing a fresh `/api/results` fetch on first open.
+- The parent dashboard now shares a dedicated `parent:dashboard` cache entry and also reuses the warmed leaderboard cache instead of always cold-loading both panels.
+
 ### 2026-04-14 Dracula Testing Room Theme
 
 - `lib/testingRoomTheme.ts` now includes a third `dracula` preset with a dark graphite shell, crimson accents, and shared styling tokens for the test shell, header, footer, viewer, Desmos overlay, and settings preview card.
@@ -270,55 +277,8 @@ Ship `v0.1` as a whole-product redesign of the Ronan SAT app so the entire proje
 - The new `/test/[id]/entry` screen supports both full-length and sectional links, shows exam specs before launch, and for sectional links without a module lets the student choose the module from that screen.
 - Shared test-room link construction now lives in `lib/testEntryLinks.ts`; future QR, share-link, or invite work should build on that helper rather than manually assembling `/test/...` URLs in multiple places.
 
-### 2026-04-17 Performance Optimization Pass Start
+### 2026-04-18 Student Identity Onboarding
 
-- This pass focuses on reducing repeated client boot work, duplicated network requests, oversized API payloads, and avoidable route waterfalls across dashboard, review, test library, admin, and parent flows.
-- The main architectural direction is to move protected-route gating and initial data preparation back to the server wherever practical, while keeping interactive workbook UI in focused client components.
-- Shared client request deduplication should extend the existing `lib/clientCache.ts` utility instead of introducing a parallel query library.
-- Vocab and fix board providers should stay route-local only; the root app shell should not hydrate board state for unrelated routes.
-- Result fetching should split into lightweight summary payloads for dashboard/library consumers and detailed review payloads for the review flow.
-- Test and question list endpoints should keep their current user-facing behavior, but return narrower DTOs and reuse explicit cache invalidation on admin mutations.
-
-### 2026-04-17 Performance Optimization Pass Complete
-
-- Protected student, parent, admin, and settings entrypoints now load from the server first and hand preloaded props into focused client components instead of starting with route-level client fetch waterfalls.
-- `lib/clientCache.ts` now dedupes in-flight requests; dashboard, review, question, and chatbot reads now reuse that shared cache path.
-- Results are now normalized into separate `summary` and `detail` view shapes at the service boundary, preventing the dashboard/library surfaces from pulling full populated review payloads.
-- The parent dashboard data model now comes from `lib/services/parentDashboardService.ts`, which is shared by the page and API route so the heavy aggregation logic only exists in one place.
-- Verification completed with `npm run lint` and `npm run build`.
-
-### 2026-04-18 Performance Regression Follow-up
-- In progress: audit regressions introduced by the 2026-04-17 caching pass, with priority on broken figure/table rendering in the live test flow.
-- Fixes must preserve request dedupe and payload reductions while restoring the full question data contract required by test and review surfaces.
-- Verify question/image rendering, cache freshness boundaries, and any route-specific regressions before closing this follow-up.
-
-- Done: versioned the question cache (pi:questions:v2) and restored question visual rendering through a shared extra-or-image block so stale cached question payloads no longer hide tables/charts or skip image-only figures.
-
-### 2026-04-18 Selective GitHub Loading Port Start
-
-- This pass ports only the safe loading and redirect improvements from `origin/main` into the current local branch.
-- Local remains the source of truth for server-first session hydration, route-local board providers, and the recent question/rendering fixes.
-- The approved GitHub-derived pieces are a shared post-auth redirect helper and a startup cache preloader aligned with current local cache keys.
-- The explicitly rejected GitHub pieces are the client-only `AuthProvider`, the root-level `VocabBoardProvider`, and any global boot overlay path that can block rendering without a guaranteed clear path.
-
-### 2026-04-18 Selective GitHub Loading Port Complete
-
-- Added `lib/getPostAuthRedirectPath.ts` and switched `/`, `/auth`, `/auth/redirect`, `/auth/parent`, `/auth/forgot-password`, and `/auth/reset-password` to use the shared redirect decision instead of mixing hard-coded paths and `window.location` redirects.
-- Kept the local server-first session architecture in `app/layout.tsx` and `components/AuthProvider.tsx`; the GitHub client-only auth boot path was intentionally not imported.
-- Added `components/AppStartupPreloader.tsx` and `lib/startupPreload.ts` to warm the existing dashboard, review, test-library, leaderboard, and parent-dashboard cache keys after authentication without blocking route render.
-- Explicitly did not port the GitHub global boot overlay or the root-level `VocabBoardProvider`, because those changes would reintroduce known regressions in local.
-
-### 2026-04-18 Remote Sync Follow-up Start
-
-- Fetched the latest `origin/main` and reviewed the recent auth/loading/onboarding commits instead of pulling blindly into the local branch.
-- The next selective port will bring in the remote student profile-completion feature (`username` + `birthDate`) while keeping local server-first session hydration, non-blocking preloaders, and the current render/cache fixes intact.
-- Remote global loading overlays, client-only auth boot changes, and root-level provider changes remain out of scope for this sync because they are still incompatible with local stability goals.
-
-### 2026-04-18 Remote Sync Follow-up Complete
-
-- Ported the remote student onboarding/profile-completion feature into local through `username` and `birthDate` fields on the user model, session payload, `/welcome`, and the onboarding/username APIs.
-- Kept local server-first auth boot, route-local providers, and the non-blocking startup preloader; no remote loading overlay or client-only auth changes were merged.
-- Added server-side student onboarding gates to the main protected study routes (`dashboard`, `full-length`, `review`, `sectional`) so incomplete student profiles are routed to `/welcome` without changing admin or parent flows.
-- Extended settings to show locked `username` and `birthDate` while preserving the local editable display-name behavior.
-- Verification passed with `eslint`, `tsc`, and `npm run build`. HTTP smoke checks passed for unauthenticated redirects and onboarding API auth guards. Full end-to-end authenticated QA is still blocked by a DB-backed auth/register issue in the current environment.
-
+- Student accounts now need a one-time welcome setup with an immutable `username` and `birthDate` before entering the main app.
+- Username availability should stay efficient by querying a sparse unique MongoDB index on the normalized lowercase `username` field rather than scanning names or using regex lookups.
+- Settings should show student identity details as locked read-only values, not as editable profile fields.

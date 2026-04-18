@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getSession, signIn, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 
+import InitialTabBootReady from "@/components/InitialTabBootReady";
 import AuthWorkbookShell from "@/components/auth/AuthWorkbookShell";
 import Loading from "@/components/Loading";
-import { getPostAuthRedirectPath } from "@/lib/getPostAuthRedirectPath";
 
 type ParentAuthView = "link" | "verify";
 
@@ -21,7 +21,7 @@ const messageClassName =
 
 export default function ParentAuthPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { status } = useSession();
 
   const [view, setView] = useState<ParentAuthView>("link");
   const [studentEmail, setStudentEmail] = useState("");
@@ -34,9 +34,9 @@ export default function ParentAuthPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace(getPostAuthRedirectPath(session?.user));
+      router.replace("/auth/redirect");
     }
-  }, [router, session?.user, status]);
+  }, [router, status]);
 
   if (status === "loading" || status === "authenticated") {
     return <Loading showQuote={false} />;
@@ -126,8 +126,7 @@ export default function ParentAuthPage() {
         return;
       }
 
-      const nextSession = await getSession();
-      router.replace(getPostAuthRedirectPath(nextSession?.user));
+      window.location.assign("/auth/redirect");
     } catch {
       setError("Unable to verify the code. Please try again.");
     } finally {
@@ -196,6 +195,7 @@ export default function ParentAuthPage() {
       backHref="/auth"
       backLabel="Back to student sign in"
     >
+      <InitialTabBootReady />
       <div className="mb-5 rounded-2xl border-2 border-ink-fg bg-paper-bg px-4 py-4 text-sm font-medium leading-6 text-ink-fg">
         {view === "link"
           ? "Step 1: enter the student's email. Step 2: the student receives a 6-digit code. Step 3: use that code to finish parent access."
