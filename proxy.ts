@@ -88,7 +88,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
     "/full-length/:path*",
     "/sectional/:path*",
     "/review/:path*",
@@ -97,6 +96,5 @@ export const config = {
     "/settings/:path*",
     "/fix/:path*",
     "/parent/:path*",
-    "/welcome",
   ],
 };
