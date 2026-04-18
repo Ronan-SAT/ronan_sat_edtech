@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -193,43 +192,23 @@ const ADMIN_ITEMS: NavItemConfig[] = [
 export default function Navbar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
-  const router = useRouter();
-
-  if (
-    status === "loading" ||
-    status === "unauthenticated" ||
-    !session ||
-    pathname.startsWith("/test/") ||
-    pathname.startsWith("/auth")
-  ) {
-    return null;
-  }
-
-  const isParent = session.user.role === "PARENT";
-  const isAdmin = session.user.role === "ADMIN";
+  const isReady = status !== "loading" && status !== "unauthenticated" && !!session;
+  const isHiddenRoute = pathname.startsWith("/test/") || pathname.startsWith("/auth");
+  const isParent = session?.user.role === "PARENT";
+  const isAdmin = session?.user.role === "ADMIN";
   const homeHref = isParent ? "/parent/dashboard" : "/dashboard";
   const navItems = isAdmin ? ADMIN_ITEMS : isParent ? PARENT_ITEMS : STUDENT_ITEMS;
-  const displayName = session.user.name || session.user.email?.split("@")[0] || "Scholar";
+  const displayName = session?.user.name || session?.user.email?.split("@")[0] || "Scholar";
 
-  useEffect(() => {
-    const hrefs = new Set([homeHref, ...navItems.map((item) => item.href)]);
-
-    hrefs.forEach((href) => {
-      router.prefetch(href);
-    });
-  }, [homeHref, navItems, router]);
+  if (!isReady || isHiddenRoute) {
+    return null;
+  }
 
   return (
     <>
       <aside className="app-shell-navigation fixed inset-y-0 left-0 z-40 hidden w-64 border-r-4 border-ink-fg bg-surface-white lg:flex lg:flex-col">
         <div className="border-b-4 border-ink-fg bg-paper-bg px-5 py-5">
-          <Link
-            href={homeHref}
-            prefetch
-            onMouseEnter={() => router.prefetch(homeHref)}
-            onFocus={() => router.prefetch(homeHref)}
-            className="group block rounded-2xl border-2 border-ink-fg bg-surface-white p-3.5 brutal-shadow-sm workbook-press"
-          >
+          <Link href={homeHref} className="group block rounded-2xl border-2 border-ink-fg bg-surface-white p-3.5 brutal-shadow-sm workbook-press">
             <BrandLogo
               priority
               size={48}
@@ -243,7 +222,7 @@ export default function Navbar() {
         <div className="workbook-scrollbar bg-dot-pattern flex-1 overflow-y-auto px-3 py-4">
           <div className="space-y-2.5">
             {navItems.map((item) => (
-              <NavItem key={item.href} item={item} pathname={pathname} compact={false} onPrefetch={router.prefetch} />
+              <NavItem key={item.href} item={item} pathname={pathname} compact={false} />
             ))}
           </div>
         </div>
@@ -269,7 +248,7 @@ export default function Navbar() {
         <div className="bg-dot-pattern overflow-x-auto px-2 py-2 sm:px-3 sm:py-3">
           <div className="flex min-w-max gap-1.5 sm:gap-2">
             {navItems.map((item) => (
-              <NavItem key={item.href} item={item} pathname={pathname} compact onPrefetch={router.prefetch} />
+              <NavItem key={item.href} item={item} pathname={pathname} compact />
             ))}
             <button
               onClick={() => signOut({ callbackUrl: "/auth" })}
@@ -290,12 +269,10 @@ function NavItem({
   item,
   pathname,
   compact,
-  onPrefetch,
 }: {
   item: NavItemConfig;
   pathname: string;
   compact: boolean;
-  onPrefetch: (href: string) => void;
 }) {
   const active = item.matches.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
   const Icon = item.icon;
@@ -303,10 +280,6 @@ function NavItem({
   return (
     <Link
       href={item.href}
-      prefetch
-      onMouseEnter={() => onPrefetch(item.href)}
-      onFocus={() => onPrefetch(item.href)}
-      onTouchStart={() => onPrefetch(item.href)}
       className={[
         active ? "border-4 border-ink-fg brutal-shadow-sm workbook-press" : "border-2 border-ink-fg brutal-shadow-sm workbook-press",
         compact
