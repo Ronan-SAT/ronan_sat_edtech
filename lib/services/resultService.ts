@@ -43,6 +43,10 @@ type AttemptSectionRow = {
   module_number: number | null;
 } | null;
 
+function getAttemptSection(section: AttemptSectionRow | AttemptSectionRow[] | undefined) {
+  return Array.isArray(section) ? section[0] ?? null : section ?? null;
+}
+
 function getQuestionSection(question: QuestionRow) {
   return question.test_sections;
 }
@@ -326,7 +330,10 @@ async function fetchResultsView(userId: string, days?: number) {
     answersByAttemptId.set(answer.attempt_id, existing);
   }
 
-  return (attempts ?? []).map((attempt) => ({
+  return (attempts ?? []).map((attempt) => {
+    const section = getAttemptSection(attempt.test_sections as AttemptSectionRow | AttemptSectionRow[] | undefined);
+
+    return ({
     _id: attempt.id,
     testId: {
       _id: attempt.test_id,
@@ -339,10 +346,11 @@ async function fetchResultsView(userId: string, days?: number) {
     readingScore: attempt.reading_score ?? undefined,
     mathScore: attempt.math_score ?? undefined,
     isSectional: attempt.mode === "sectional",
-    sectionalSubject: (attempt.test_sections as AttemptSectionRow)?.name ?? undefined,
-    sectionalModule: (attempt.test_sections as AttemptSectionRow)?.module_number ?? undefined,
+    sectionalSubject: section?.name ?? undefined,
+    sectionalModule: section?.module_number ?? undefined,
     answers: answersByAttemptId.get(attempt.id) ?? [],
-  } satisfies ReviewResult));
+  } satisfies ReviewResult);
+  });
 }
 
 export const resultService = {

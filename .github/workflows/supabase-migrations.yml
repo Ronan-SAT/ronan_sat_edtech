@@ -2,23 +2,14 @@ name: Supabase Migrations
 
 on:
   pull_request:
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/seed.sql"
-      - "supabase/config.toml"
-      - ".github/workflows/supabase-migrations.yml"
-      - "package.json"
-      - "bun.lock"
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
   push:
     branches:
       - main
-    paths:
-      - "supabase/migrations/**"
-      - "supabase/seed.sql"
-      - "supabase/config.toml"
-      - ".github/workflows/supabase-migrations.yml"
-      - "package.json"
-      - "bun.lock"
 
 jobs:
   validate-migrations:
