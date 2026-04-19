@@ -1,5 +1,9 @@
 name: Database CI
 
+permissions:
+  contents: read
+  pull-requests: write
+
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
@@ -51,6 +55,7 @@ jobs:
       - run: supabase db reset
 
   dryrun:
+    needs: test
     runs-on: ubuntu-latest
     environment: Action Production
     env:
@@ -73,7 +78,14 @@ jobs:
           version: 2.92.1
 
       - name: Resolve linked project ref
-        run: echo "SUPABASE_PROJECT_REF=$(node -p \"require('./supabase/.temp/linked-project.json').ref\")" >> "$GITHUB_ENV"
+        shell: bash
+        run: |
+          project_ref="$(node -e 'process.stdout.write(require("./supabase/.temp/linked-project.json").ref)')"
+          if [[ -z "$project_ref" ]]; then
+            echo "Failed to resolve linked Supabase project ref."
+            exit 1
+          fi
+          printf 'SUPABASE_PROJECT_REF=%s\n' "$project_ref" >> "$GITHUB_ENV"
 
       - run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
 
