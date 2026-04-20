@@ -1,8 +1,8 @@
-export const FIX_COLUMN_COLOR_KEYS = ["sky", "mint", "lavender", "peach", "sand"] as const;
+export const TEST_MANAGER_COLUMN_COLOR_KEYS = ["sky", "mint", "lavender", "peach", "sand"] as const;
 
-export type FixColumnColorKey = (typeof FIX_COLUMN_COLOR_KEYS)[number];
+export type TestManagerColumnColorKey = (typeof TEST_MANAGER_COLUMN_COLOR_KEYS)[number];
 
-export type FixReportEntry = {
+export type TestManagerReportEntry = {
   id: string;
   reporterId?: string;
   reporterName?: string;
@@ -13,7 +13,7 @@ export type FixReportEntry = {
   createdAt: string;
 };
 
-export type FixCard = {
+export type TestManagerCard = {
   id: string;
   text: string;
   createdAt: string;
@@ -24,41 +24,41 @@ export type FixCard = {
   module: number;
   questionNumber: number;
   reportCount: number;
-  reports: FixReportEntry[];
+  reports: TestManagerReportEntry[];
 };
 
-export type FixColumn = {
+export type TestManagerColumn = {
   id: string;
   title: string;
   cardIds: string[];
-  colorKey: FixColumnColorKey;
+  colorKey: TestManagerColumnColorKey;
 };
 
-export type FixBoardState = {
+export type TestManagerBoardState = {
   inboxIds: string[];
-  columns: FixColumn[];
-  cards: Record<string, FixCard>;
+  columns: TestManagerColumn[];
+  cards: Record<string, TestManagerCard>;
 };
 
-export const emptyFixBoard: FixBoardState = {
+export const emptyTestManagerBoard: TestManagerBoardState = {
   inboxIds: [],
   columns: [],
   cards: {},
 };
 
-export function normalizeFixBoard(raw: unknown): FixBoardState {
+export function normalizeTestManagerBoard(raw: unknown): TestManagerBoardState {
   if (!raw || typeof raw !== "object") {
-    return emptyFixBoard;
+    return emptyTestManagerBoard;
   }
 
-  const maybeBoard = raw as Partial<FixBoardState>;
+  const maybeBoard = raw as Partial<TestManagerBoardState>;
   const cardIdMap = new Map<string, string>();
   const usedCardIds = new Set<string>();
   const cardsEntries = maybeBoard.cards && typeof maybeBoard.cards === "object" ? Object.entries(maybeBoard.cards) : [];
-  const normalizedCards: Record<string, FixCard> = {};
+  const normalizedCards: Record<string, TestManagerCard> = {};
 
   cardsEntries.forEach(([entryKey, rawCard], index) => {
-    const value = rawCard as Partial<FixCard> | undefined;
+    const value = rawCard as Partial<TestManagerCard> | undefined;
     const rawId = isString(value?.id) ? value.id : entryKey;
 
     if (
@@ -75,7 +75,7 @@ export function normalizeFixBoard(raw: unknown): FixBoardState {
       return;
     }
 
-    const nextId = makeStableUniqueId(rawId, usedCardIds, "fix", index);
+    const nextId = makeStableUniqueId(rawId, usedCardIds, "test-manager", index);
     const reports = Array.isArray(value.reports)
       ? value.reports
           .filter((report) => Boolean(report && typeof report === "object"))
@@ -90,9 +90,9 @@ export function normalizeFixBoard(raw: unknown): FixBoardState {
                 : report.errorType === "Missing Graph/Image"
                   ? "Missing Graph/Image"
                   : "Question"
-            ) as FixReportEntry["errorType"],
+            ) as TestManagerReportEntry["errorType"],
             note: isString(report.note) ? report.note : undefined,
-            source: (report.source === "review" ? "review" : "test") as FixReportEntry["source"],
+            source: (report.source === "review" ? "review" : "test") as TestManagerReportEntry["source"],
             createdAt: isString(report.createdAt) ? report.createdAt : (value.createdAt as string),
           }))
       : [];
@@ -117,7 +117,7 @@ export function normalizeFixBoard(raw: unknown): FixBoardState {
   const usedColumnIds = new Set<string>();
   const normalizedColumns = Array.isArray(maybeBoard.columns)
     ? maybeBoard.columns
-        .filter((column): column is FixColumn => Boolean(column && typeof column === "object"))
+        .filter((column): column is TestManagerColumn => Boolean(column && typeof column === "object"))
         .map((column, index) => {
           const rawId = isString(column.id) ? column.id : `column-restored-${index}`;
           const nextId = makeStableUniqueId(rawId, usedColumnIds, "column", index);
@@ -132,7 +132,7 @@ export function normalizeFixBoard(raw: unknown): FixBoardState {
             id: nextId,
             title: isString(column.title) ? column.title : "Untitled",
             cardIds: Array.from(new Set(remappedCardIds)),
-            colorKey: isColorKey(column.colorKey) ? column.colorKey : FIX_COLUMN_COLOR_KEYS[index % FIX_COLUMN_COLOR_KEYS.length],
+            colorKey: isColorKey(column.colorKey) ? column.colorKey : TEST_MANAGER_COLUMN_COLOR_KEYS[index % TEST_MANAGER_COLUMN_COLOR_KEYS.length],
           };
         })
     : [];
@@ -159,8 +159,8 @@ function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
-function isColorKey(value: unknown): value is FixColumnColorKey {
-  return typeof value === "string" && FIX_COLUMN_COLOR_KEYS.includes(value as FixColumnColorKey);
+function isColorKey(value: unknown): value is TestManagerColumnColorKey {
+  return typeof value === "string" && TEST_MANAGER_COLUMN_COLOR_KEYS.includes(value as TestManagerColumnColorKey);
 }
 
 function makeStableUniqueId(baseId: string, usedIds: Set<string>, prefix: string, index: number) {

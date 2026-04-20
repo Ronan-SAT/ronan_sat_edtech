@@ -3,13 +3,20 @@ import { getServerSession } from "@/lib/auth/server";
 import { z } from "zod";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { emptyFixBoard, normalizeFixBoard, type FixBoardState, type FixCard, type FixReportEntry } from "@/lib/fixBoard";
+import {
+  emptyTestManagerBoard,
+  normalizeTestManagerBoard,
+  type TestManagerBoardState,
+  type TestManagerCard,
+  type TestManagerReportEntry,
+} from "@/lib/testManagerBoard";
 import dbConnect from "@/lib/mongodb";
-import FixBoard from "@/lib/models/FixBoard";
+import TestManagerBoard from "@/lib/models/TestManagerBoard";
 
-const FIX_BOARD_KEY = "global";
+const TEST_MANAGER_BOARD_KEY = "global";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const FixReportSchema = z.object({
+const TestManagerReportSchema = z.object({
   testId: z.string().min(1),
   questionId: z.string().min(1),
   section: z.string().min(1),
@@ -20,10 +27,10 @@ const FixReportSchema = z.object({
   source: z.enum(["test", "review"]).default("test"),
 });
 
-async function getFixBoardDocument() {
-  return FixBoard.findOneAndUpdate(
-    { key: FIX_BOARD_KEY },
-    { $setOnInsert: { board: emptyFixBoard } },
+async function getTestManagerBoardDocument() {
+  return TestManagerBoard.findOneAndUpdate(
+    { key: TEST_MANAGER_BOARD_KEY },
+    { $setOnInsert: { board: emptyTestManagerBoard } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
 }
@@ -34,17 +41,11 @@ function createUniqueId(prefix: string) {
 
 async function resolveLegacyTestAndQuestionIds(testId: string, questionId: string) {
   const supabase = createSupabaseAdminClient();
+  const testQuery = supabase.from("tests").select("id,title,legacy_mongo_id");
+  const questionQuery = supabase.from("questions").select("id,legacy_mongo_id");
   const [{ data: test }, { data: question }] = await Promise.all([
-    supabase
-      .from("tests")
-      .select("id,title,legacy_mongo_id")
-      .or(`id.eq.${testId},legacy_mongo_id.eq.${testId}`)
-      .maybeSingle(),
-    supabase
-      .from("questions")
-      .select("id,legacy_mongo_id")
-      .or(`id.eq.${questionId},legacy_mongo_id.eq.${questionId}`)
-      .maybeSingle(),
+    (isUuid(testId) ? testQuery.eq("id", testId) : testQuery.eq("legacy_mongo_id", testId)).maybeSingle(),
+    (isUuid(questionId) ? questionQuery.eq("id", questionId) : questionQuery.eq("legacy_mongo_id", questionId)).maybeSingle(),
   ]);
 
   return {
@@ -54,14 +55,18 @@ async function resolveLegacyTestAndQuestionIds(testId: string, questionId: strin
   };
 }
 
-function buildCardTitle(card: Pick<FixCard, "section" | "module" | "questionNumber" | "testTitle">) {
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value);
+}
+
+function buildCardTitle(card: Pick<TestManagerCard, "section" | "module" | "questionNumber" | "testTitle">) {
   return card.testTitle;
 }
 
 function appendReportToBoard(
-  board: FixBoardState,
-  payload: z.infer<typeof FixReportSchema>,
-  report: FixReportEntry,
+  board: TestManagerBoardState,
+  payload: z.infer<typeof TestManagerReportSchema>,
+  report: TestManagerReportEntry,
   testTitle: string,
 ) {
   const existingCard = Object.values(board.cards).find(
@@ -77,7 +82,7 @@ function appendReportToBoard(
       };
     }
 
-    const nextCard: FixCard = {
+    const nextCard: TestManagerCard = {
       ...existingCard,
       testTitle: testTitle || existingCard.testTitle,
       reportCount: existingCard.reportCount + 1,
@@ -100,8 +105,8 @@ function appendReportToBoard(
     };
   }
 
-  const cardId = createUniqueId("fix");
-  const nextCard: FixCard = {
+  const cardId = createUniqueId("test-manager");
+  const nextCard: TestManagerCard = {
     id: cardId,
     createdAt: report.createdAt,
     testId: payload.testId,
@@ -138,7 +143,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const payload = FixReportSchema.parse(body);
+    const payload = TestManagerReportSchema.parse(body);
     const resolvedIds = await resolveLegacyTestAndQuestionIds(payload.testId, payload.questionId);
     const normalizedPayload = {
       ...payload,
@@ -148,10 +153,10 @@ export async function POST(req: Request) {
 
     await dbConnect();
 
-    const document = await getFixBoardDocument();
+    const document = await getTestManagerBoardDocument();
 
-    const board = normalizeFixBoard(document.board);
-    const report: FixReportEntry = {
+    const board = normalizeTestManagerBoard(document.board);
+    const report: TestManagerReportEntry = {
       id: createUniqueId("report"),
       reporterId: session.user.id,
       reporterName: session.user.name ?? undefined,
@@ -172,7 +177,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: "Report submitted", board: nextBoard }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/fix-reports error:", error);
+    console.error("POST /api/test-manager-reports error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid report payload", details: error.flatten() }, { status: 400 });

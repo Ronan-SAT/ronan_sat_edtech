@@ -4,31 +4,37 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 
 import { API_PATHS } from "@/lib/apiPaths";
 import {
-  emptyFixBoard,
-  FIX_COLUMN_COLOR_KEYS,
-  normalizeFixBoard,
-  type FixBoardState,
-  type FixColumnColorKey,
-} from "@/lib/fixBoard";
+  emptyTestManagerBoard,
+  normalizeTestManagerBoard,
+  TEST_MANAGER_COLUMN_COLOR_KEYS,
+  type TestManagerBoardState,
+  type TestManagerColumnColorKey,
+} from "@/lib/testManagerBoard";
 
-export { FIX_COLUMN_COLOR_KEYS, type FixBoardState, type FixCard, type FixColumn, type FixColumnColorKey } from "@/lib/fixBoard";
+export {
+  TEST_MANAGER_COLUMN_COLOR_KEYS,
+  type TestManagerBoardState,
+  type TestManagerCard,
+  type TestManagerColumn,
+  type TestManagerColumnColorKey,
+} from "@/lib/testManagerBoard";
 
-type FixBoardContextValue = {
-  board: FixBoardState;
+type TestManagerBoardContextValue = {
+  board: TestManagerBoardState;
   hydrated: boolean;
   createColumn: (title: string) => string | null;
   moveCard: (cardId: string, destination: string) => void;
   removeCard: (cardId: string) => void;
   updateColumnTitle: (columnId: string, title: string) => void;
-  updateColumnColor: (columnId: string, colorKey: FixColumnColorKey) => void;
+  updateColumnColor: (columnId: string, colorKey: TestManagerColumnColorKey) => void;
   removeColumn: (columnId: string) => void;
   reorderColumns: (draggedColumnId: string, targetColumnId: string, position: "before" | "after") => void;
 };
 
-const FixBoardContext = createContext<FixBoardContextValue | null>(null);
+const TestManagerBoardContext = createContext<TestManagerBoardContextValue | null>(null);
 
-async function persistBoardToServer(nextBoard: FixBoardState) {
-  const response = await fetch(API_PATHS.FIX_BOARD, {
+async function persistBoardToServer(nextBoard: TestManagerBoardState) {
+  const response = await fetch(API_PATHS.TEST_MANAGER_BOARD, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -37,14 +43,14 @@ async function persistBoardToServer(nextBoard: FixBoardState) {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to save fix board: ${response.status}`);
+    throw new Error(`Failed to save test manager board: ${response.status}`);
   }
 }
 
-export function FixBoardProvider({ children }: { children: ReactNode }) {
+export function TestManagerBoardProvider({ children }: { children: ReactNode }) {
   const idRef = useRef(0);
   const lastPersistedRef = useRef("");
-  const [board, setBoard] = useState<FixBoardState>(emptyFixBoard);
+  const [board, setBoard] = useState<TestManagerBoardState>(emptyTestManagerBoard);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -54,17 +60,17 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
       setHydrated(false);
 
       try {
-        const response = await fetch(API_PATHS.FIX_BOARD, {
+        const response = await fetch(API_PATHS.TEST_MANAGER_BOARD, {
           method: "GET",
           cache: "no-store",
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to load fix board: ${response.status}`);
+          throw new Error(`Failed to load test manager board: ${response.status}`);
         }
 
         const payload = (await response.json()) as { board?: unknown };
-        const nextBoard = normalizeFixBoard(payload.board);
+        const nextBoard = normalizeTestManagerBoard(payload.board);
 
         if (!cancelled) {
           setBoard(nextBoard);
@@ -72,10 +78,10 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
           setHydrated(true);
         }
       } catch (error) {
-        console.error("Failed to hydrate fix board:", error);
+        console.error("Failed to hydrate test manager board:", error);
         if (!cancelled) {
-          setBoard(emptyFixBoard);
-          lastPersistedRef.current = JSON.stringify(emptyFixBoard);
+          setBoard(emptyTestManagerBoard);
+          lastPersistedRef.current = JSON.stringify(emptyTestManagerBoard);
           setHydrated(true);
         }
       }
@@ -104,14 +110,14 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
           lastPersistedRef.current = serializedBoard;
         })
         .catch((error) => {
-          console.error("Failed to persist fix board:", error);
+          console.error("Failed to persist test manager board:", error);
         });
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
   }, [board, hydrated]);
 
-  const value = useMemo<FixBoardContextValue>(
+  const value = useMemo<TestManagerBoardContextValue>(
     () => ({
       board,
       hydrated,
@@ -121,7 +127,7 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
           return null;
         }
 
-        const columnId = createUniqueId("fix-column", idRef);
+        const columnId = createUniqueId("test-manager-column", idRef);
         setBoard((previous) => ({
           ...previous,
           columns: [
@@ -130,7 +136,7 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
               id: columnId,
               title: normalizedTitle,
               cardIds: [],
-              colorKey: FIX_COLUMN_COLOR_KEYS[previous.columns.length % FIX_COLUMN_COLOR_KEYS.length],
+              colorKey: TEST_MANAGER_COLUMN_COLOR_KEYS[previous.columns.length % TEST_MANAGER_COLUMN_COLOR_KEYS.length],
             },
           ],
         }));
@@ -225,24 +231,24 @@ export function FixBoardProvider({ children }: { children: ReactNode }) {
     [board, hydrated],
   );
 
-  return <FixBoardContext.Provider value={value}>{children}</FixBoardContext.Provider>;
+  return <TestManagerBoardContext.Provider value={value}>{children}</TestManagerBoardContext.Provider>;
 }
 
-export function useFixBoard() {
-  const context = useContext(FixBoardContext);
+export function useTestManagerBoard() {
+  const context = useContext(TestManagerBoardContext);
   if (!context) {
-    throw new Error("useFixBoard must be used within FixBoardProvider");
+    throw new Error("useTestManagerBoard must be used within TestManagerBoardProvider");
   }
 
   return context;
 }
 
-function moveCardBetweenBuckets(board: FixBoardState, cardId: string, destination: string) {
+function moveCardBetweenBuckets(board: TestManagerBoardState, cardId: string, destination: string) {
   if (!board.cards[cardId]) {
     return board;
   }
 
-  const nextBoard: FixBoardState = {
+  const nextBoard: TestManagerBoardState = {
     ...board,
     inboxIds: board.inboxIds.filter((id) => id !== cardId),
     columns: board.columns.map((column) => ({

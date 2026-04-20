@@ -2,12 +2,12 @@ import type { DragEvent, RefObject } from "react";
 import { MoreHorizontal } from "lucide-react";
 
 import {
-  FIX_COLUMN_COLOR_KEYS,
-  type FixCard,
-  type FixColumn as FixColumnType,
-  type FixColumnColorKey,
-} from "@/components/fix/FixBoardProvider";
-import { FixCardTile } from "@/components/fix/FixCardTile";
+  TEST_MANAGER_COLUMN_COLOR_KEYS,
+  type TestManagerCard,
+  type TestManagerColumn as TestManagerColumnType,
+  type TestManagerColumnColorKey,
+} from "@/components/test-manager/TestManagerBoardProvider";
+import { TestManagerCardTile } from "@/components/test-manager/TestManagerCardTile";
 import {
   BoardColumnShell,
   BoardEmptyState,
@@ -17,9 +17,9 @@ import {
 } from "@/components/vocab/VocabBoardPrimitives";
 import { COLUMN_THEME } from "@/components/vocab/vocabPageTheme";
 
-type FixColumnProps = {
-  column: FixColumnType;
-  cards: FixCard[];
+type TestManagerColumnProps = {
+  column: TestManagerColumnType;
+  cards: TestManagerCard[];
   showBefore: boolean;
   showAfter: boolean;
   isDragging: boolean;
@@ -33,17 +33,16 @@ type FixColumnProps = {
   onCancelColumnEdit: () => void;
   onStartColumnEdit: () => void;
   onToggleMenu: (columnId: string) => void;
-  onUpdateColumnColor: (columnId: string, colorKey: FixColumnColorKey) => void;
+  onUpdateColumnColor: (columnId: string, colorKey: TestManagerColumnColorKey) => void;
   onRemoveColumn: (columnId: string) => void;
   onDropCard: () => void;
   onHeaderDragStart: (event: DragEvent, columnId: string) => void;
   onHeaderDragEnd: () => void;
   onHeaderDragOver: (event: DragEvent, columnId: string) => void;
   onHeaderDrop: (event: DragEvent, columnId: string) => void;
-  onResolveCard: (cardId: string) => void;
 };
 
-export function FixColumn({
+export function TestManagerColumn({
   column,
   cards,
   showBefore,
@@ -66,8 +65,7 @@ export function FixColumn({
   onHeaderDragEnd,
   onHeaderDragOver,
   onHeaderDrop,
-  onResolveCard,
-}: FixColumnProps) {
+}: TestManagerColumnProps) {
   const theme = COLUMN_THEME[column.colorKey];
   const isEditingColumn = editingColumnId === column.id;
   const isMenuOpen = openMenuColumnId === column.id;
@@ -78,7 +76,9 @@ export function FixColumn({
       <BoardColumnShell
         accentClass={theme.accent}
         shellClass={theme.shell}
+        widthClass="w-[375px]"
         isDragging={isDragging}
+        eyebrow={null}
         title={
           isEditingColumn ? (
             <div className="rounded-[14px] border-2 border-ink-fg bg-surface-white p-2 brutal-shadow-sm">
@@ -104,6 +104,7 @@ export function FixColumn({
             <ColumnHeader
               title={column.title}
               subtitle={`${cards.length} items`}
+              className={theme.header}
               menuButton={
                 <div className="relative" ref={isMenuOpen ? menuRef : undefined}>
                   <button
@@ -123,7 +124,7 @@ export function FixColumn({
                         Column Color
                       </div>
                       <div className="flex flex-wrap gap-2 px-2 pb-2">
-                        {FIX_COLUMN_COLOR_KEYS.map((colorKey) => (
+                        {TEST_MANAGER_COLUMN_COLOR_KEYS.map((colorKey) => (
                           <button
                             key={colorKey}
                             type="button"
@@ -161,7 +162,7 @@ export function FixColumn({
           <BoardEmptyState text="Drop grouped reports here." />
         ) : (
           cards.map((card) => (
-            <FixCardTile key={card.id} card={card} draggable onDragStart={onCardDragStart} onResolve={() => onResolveCard(card.id)} />
+            <TestManagerCardTile key={card.id} card={card} draggable detailHref={`/test-manager/questions/${card.id}`} onDragStart={onCardDragStart} />
           ))
         )}
       </BoardColumnShell>

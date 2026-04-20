@@ -4,18 +4,18 @@ import { useSession } from "@/lib/auth/client";
 
 import InitialTabBootReady from "@/components/InitialTabBootReady";
 import Loading from "@/components/Loading";
-import { FixBoardProvider } from "@/components/fix/FixBoardProvider";
-import { FixColumn } from "@/components/fix/FixColumn";
-import { FixInboxColumn } from "@/components/fix/FixInboxColumn";
-import { FixPageHeader } from "@/components/fix/FixPageHeader";
-import { useFixPageController } from "@/components/fix/useFixPageController";
+import { TestManagerBoardProvider } from "@/components/test-manager/TestManagerBoardProvider";
+import { TestManagerColumn } from "@/components/test-manager/TestManagerColumn";
+import { TestManagerInboxColumn } from "@/components/test-manager/TestManagerInboxColumn";
+import { TestManagerPageHeader } from "@/components/test-manager/TestManagerPageHeader";
+import { useTestManagerPageController } from "@/components/test-manager/useTestManagerPageController";
 import { VocabAddColumnPanel } from "@/components/vocab/VocabAddColumnPanel";
 
-function isFixCard<T>(value: T | undefined | null): value is T {
+function isTestManagerCard<T>(value: T | undefined | null): value is T {
   return Boolean(value);
 }
 
-function FixBoardScreen() {
+function TestManagerScreen() {
   const {
     board,
     hydrated,
@@ -27,7 +27,6 @@ function FixBoardScreen() {
     editingColumnId,
     editingColumnTitle,
     openMenuColumnId,
-    expandedCardIds,
     menuRef,
     boardScrollRef,
     setDraggingCardId,
@@ -49,17 +48,15 @@ function FixBoardScreen() {
     handleColumnDrop,
     handleBoardDragOver,
     handleBoardDrop,
-    removeCard,
-    toggleExpandedCard,
-  } = useFixPageController();
+  } = useTestManagerPageController();
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-paper-bg bg-dot-pattern px-4 py-4 sm:px-5 lg:px-6">
+    <main className="min-h-[calc(100vh-4rem)] bg-paper-bg bg-dot-pattern px-4 py-4 sm:px-5 lg:h-screen lg:overflow-hidden lg:px-6">
       <InitialTabBootReady when={hydrated} />
-      <div className="mx-auto max-w-[1640px]">
-        <FixPageHeader />
+      <div className="mx-auto max-w-[1640px] lg:flex lg:h-full lg:flex-col">
+        <TestManagerPageHeader />
 
-        <section className="workbook-panel p-3">
+        <section className="workbook-panel p-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
           <div className="mb-3 flex items-center justify-between px-1">
             <div>
               <div className="text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-fg/70">Collections</div>
@@ -69,22 +66,19 @@ function FixBoardScreen() {
 
           <div
             ref={boardScrollRef}
-            className="flex gap-4 overflow-x-auto pb-2"
+            className="flex gap-4 overflow-x-auto pb-2 lg:min-h-0 lg:flex-1 lg:items-stretch"
             onDragOver={handleBoardDragOver}
             onDrop={handleBoardDrop}
           >
-            <FixInboxColumn
+            <TestManagerInboxColumn
               hydrated={hydrated}
               cards={inboxCards}
-              expandedCardIds={expandedCardIds}
               onCardDragStart={setDraggingCardId}
               onDropCard={() => handleDropCardToBucket("inbox")}
-              onToggleExpanded={toggleExpandedCard}
-              onResolve={removeCard}
             />
 
             {board.columns.map((column) => {
-              const columnCards = column.cardIds.map((cardId) => board.cards[cardId]).filter(isFixCard);
+              const columnCards = column.cardIds.map((cardId) => board.cards[cardId]).filter(isTestManagerCard);
               const showBefore =
                 dropIndicator?.columnId === column.id &&
                 dropIndicator.position === "before" &&
@@ -95,7 +89,7 @@ function FixBoardScreen() {
                 draggingColumnId !== column.id;
 
               return (
-                <FixColumn
+                <TestManagerColumn
                   key={column.id}
                   column={column}
                   cards={columnCards}
@@ -123,7 +117,6 @@ function FixBoardScreen() {
                     event.stopPropagation();
                     handleColumnDrop(columnId);
                   }}
-                  onResolveCard={removeCard}
                 />
               );
             })}
@@ -135,6 +128,7 @@ function FixBoardScreen() {
               onCreateColumn={handleCreateColumn}
               onCancel={cancelCreateColumn}
               onStart={() => setIsAddingColumn(true)}
+              widthClass="w-[375px]"
             />
           </div>
         </section>
@@ -143,27 +137,28 @@ function FixBoardScreen() {
   );
 }
 
-export default function FixPage() {
+export default function TestManagerPage() {
   const { data: session, status } = useSession();
+  const canEditPublicExams = session?.user.permissions.includes("edit_public_exams");
 
   if (status === "loading") {
     return <Loading />;
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !canEditPublicExams) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper-bg">
         <InitialTabBootReady />
         <div className="workbook-panel bg-accent-3 p-8 font-bold text-white">
-          Unauthorized. Admin access required.
+          Unauthorized. Edit Public Exams permission required.
         </div>
       </div>
     );
   }
 
   return (
-    <FixBoardProvider>
-      <FixBoardScreen />
-    </FixBoardProvider>
+    <TestManagerBoardProvider>
+      <TestManagerScreen />
+    </TestManagerBoardProvider>
   );
 }

@@ -1,33 +1,28 @@
 import { Inbox } from "lucide-react";
 
-import { FixCardTile } from "@/components/fix/FixCardTile";
-import { type FixCard } from "@/components/fix/FixBoardProvider";
+import { TestManagerCardTile } from "@/components/test-manager/TestManagerCardTile";
+import { type TestManagerCard } from "@/components/test-manager/TestManagerBoardProvider";
 import { BoardColumnShell, BoardEmptyState, ColumnHeader } from "@/components/vocab/VocabBoardPrimitives";
 
-type FixInboxColumnProps = {
+type TestManagerInboxColumnProps = {
   hydrated: boolean;
-  cards: FixCard[];
-  expandedCardIds: Record<string, boolean>;
+  cards: TestManagerCard[];
   onCardDragStart: (cardId: string) => void;
   onDropCard: () => void;
-  onToggleExpanded: (cardId: string) => void;
-  onResolve: (cardId: string) => void;
 };
 
-export function FixInboxColumn({
+export function TestManagerInboxColumn({
   hydrated,
   cards,
-  expandedCardIds,
   onCardDragStart,
   onDropCard,
-  onToggleExpanded,
-  onResolve,
-}: FixInboxColumnProps) {
+}: TestManagerInboxColumnProps) {
   return (
     <BoardColumnShell
       accentClass="bg-paper-bg text-ink-fg"
       shellClass="border-ink-fg bg-surface-white"
       widthClass="w-[375px]"
+      eyebrow={null}
       title={<ColumnHeader icon={<Inbox className="h-4 w-4" />} title="Inbox" subtitle={`${cards.length} grouped reports`} hideDefaultMenu />}
       onDrop={onDropCard}
     >
@@ -37,15 +32,12 @@ export function FixInboxColumn({
         <BoardEmptyState text="No active reports." />
       ) : (
         cards.map((card) => (
-          <FixCardTile
+          <TestManagerCardTile
             key={card.id}
             card={card}
-            expanded={!!expandedCardIds[card.id]}
             draggable
-            showDetails
+            detailHref={`/test-manager/questions/${card.id}`}
             onDragStart={onCardDragStart}
-            onToggleExpanded={() => onToggleExpanded(card.id)}
-            onResolve={() => onResolve(card.id)}
           />
         ))
       )}

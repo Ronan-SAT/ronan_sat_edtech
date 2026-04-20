@@ -2,46 +2,43 @@
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 
-import { useFixBoard, type FixCard, type FixColumn, type FixColumnColorKey } from "@/components/fix/FixBoardProvider";
+import { useTestManagerBoard, type TestManagerCard, type TestManagerColumn, type TestManagerColumnColorKey } from "@/components/test-manager/TestManagerBoardProvider";
 
-export type FixDropIndicatorState = {
+export type TestManagerDropIndicatorState = {
   columnId: string;
   position: "before" | "after";
 };
 
-function isFixCard(card: FixCard | undefined): card is FixCard {
+function isTestManagerCard(card: TestManagerCard | undefined): card is TestManagerCard {
   return Boolean(card);
 }
 
-export function useFixPageController() {
+export function useTestManagerPageController() {
   const {
     board,
     hydrated,
     createColumn,
     moveCard,
-    removeCard,
     updateColumnTitle,
     updateColumnColor,
     removeColumn,
     reorderColumns,
-  } = useFixBoard();
+  } = useTestManagerBoard();
 
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [draggingColumnId, setDraggingColumnId] = useState<string | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<FixDropIndicatorState | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<TestManagerDropIndicatorState | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState("");
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingColumnTitle, setEditingColumnTitle] = useState("");
   const [openMenuColumnId, setOpenMenuColumnId] = useState<string | null>(null);
-  const [expandedCardIds, setExpandedCardIds] = useState<Record<string, boolean>>({});
-
   const menuRef = useRef<HTMLDivElement | null>(null);
   const dragPreviewRef = useRef<HTMLElement | null>(null);
   const boardScrollRef = useRef<HTMLDivElement | null>(null);
   const dragClientXRef = useRef<number | null>(null);
 
-  const inboxCards = useMemo(() => board.inboxIds.map((id) => board.cards[id]).filter(isFixCard), [board.cards, board.inboxIds]);
+  const inboxCards = useMemo(() => board.inboxIds.map((id) => board.cards[id]).filter(isTestManagerCard), [board.cards, board.inboxIds]);
 
   useEffect(() => {
     if (!openMenuColumnId) {
@@ -132,7 +129,7 @@ export function useFixPageController() {
     setIsAddingColumn(false);
   };
 
-  const startEditColumn = (column: FixColumn) => {
+  const startEditColumn = (column: TestManagerColumn) => {
     setEditingColumnId(column.id);
     setEditingColumnTitle(column.title);
     setOpenMenuColumnId(null);
@@ -157,7 +154,7 @@ export function useFixPageController() {
     setOpenMenuColumnId((current) => (current === columnId ? null : columnId));
   };
 
-  const handleChangeColumnColor = (columnId: string, colorKey: FixColumnColorKey) => {
+  const handleChangeColumnColor = (columnId: string, colorKey: TestManagerColumnColorKey) => {
     updateColumnColor(columnId, colorKey);
     setOpenMenuColumnId(null);
   };
@@ -250,10 +247,6 @@ export function useFixPageController() {
     handleColumnDrop(dropIndicator.columnId);
   };
 
-  const toggleExpandedCard = (cardId: string) => {
-    setExpandedCardIds((previous) => ({ ...previous, [cardId]: !previous[cardId] }));
-  };
-
   return {
     board,
     hydrated,
@@ -265,7 +258,6 @@ export function useFixPageController() {
     editingColumnId,
     editingColumnTitle,
     openMenuColumnId,
-    expandedCardIds,
     menuRef,
     boardScrollRef,
     setDraggingCardId,
@@ -287,7 +279,5 @@ export function useFixPageController() {
     handleColumnDrop,
     handleBoardDragOver,
     handleBoardDrop,
-    removeCard,
-    toggleExpandedCard,
   };
 }
