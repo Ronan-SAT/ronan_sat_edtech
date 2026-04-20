@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDownUp, ChevronLeft, Search } from "lucide-react";
 
@@ -79,6 +80,7 @@ function CatalogTableColGroup() {
 }
 
 export function ManageTestsPageContent() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
   const [searchScope, setSearchScope] = useState<TestManagerCatalogSearchScope>("testTitle");
@@ -273,7 +275,19 @@ export function ManageTestsPageContent() {
                   </tr>
                 ) : (
                   visibleRows.map((row) => (
-                    <tr key={row.questionId} className="border-b-2 border-ink-fg/15 transition-colors odd:bg-surface-white even:bg-paper-bg/60 hover:bg-primary/35">
+                    <tr
+                      key={row.questionId}
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => router.push(`/test-manager/questions/${row.questionId}`)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(`/test-manager/questions/${row.questionId}`);
+                        }
+                      }}
+                      className="cursor-pointer border-b-2 border-ink-fg/15 transition-colors odd:bg-surface-white even:bg-paper-bg/60 hover:bg-primary/35 focus-visible:bg-primary/35 focus-visible:outline-none"
+                    >
                       <td className="px-4 py-3 align-middle">
                         <div className="font-semibold text-ink-fg">{row.testTitle}</div>
                         {row.domain || row.skill ? <div className="mt-1 text-xs text-ink-fg/65">{[row.domain, row.skill].filter(Boolean).join(" • ")}</div> : null}

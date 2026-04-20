@@ -197,11 +197,40 @@ function assertEditablePublicTest(test: TestRow) {
 async function resolveEditorTarget(cardId: string, session: AppSession) {
   requirePublicExamEditor(session);
 
-  const card = await getReportedQuestionCard(cardId, session);
-  const question = await getQuestionRow(card.questionId);
-  const test = await getTestRow(question.test_sections?.test_id ?? card.testId);
+  const question = await getQuestionRow(cardId);
+  const testSection = question.test_sections;
+  if (!testSection?.test_id) {
+    throw new TestManagerQuestionError(404, "Question test section not found.");
+  }
+
+  const test = await getTestRow(testSection.test_id);
 
   assertEditablePublicTest(test);
+
+  let card: TestManagerCard;
+
+  try {
+    card = await getReportedQuestionCard(question.id, session);
+  } catch (error) {
+    if (typeof error !== "object" || error === null || !("status" in error) || error.status !== 404) {
+      throw error;
+    }
+
+    card = {
+      id: question.id,
+      questionId: question.id,
+      text: test.title,
+      createdAt: new Date().toISOString(),
+      testId: test.id,
+      testTitle: test.title,
+      section: question.test_sections?.name ?? "Reading and Writing",
+      module: question.test_sections?.module_number ?? 1,
+      questionNumber: question.position,
+      reportCount: 0,
+      isResolved: false,
+      reports: [],
+    };
+  }
 
   return { card, question, test };
 }
