@@ -265,8 +265,7 @@ You can distribute the encrypted `.env.development` through git, and distribute 
 The repo also includes a two-step GitHub Actions pipeline for Supabase schema sync:
 
 - `Database CI` runs only when Supabase migration-related files change
-- that CI workflow starts a local Supabase stack, runs `supabase db lint`, runs `supabase db reset`, and performs a remote `supabase db push --dry-run`
-- on pull requests, the CI workflow comments with the dry-run result so you can see whether the merged migration is expected to apply cleanly
+- that CI workflow starts a local Supabase stack, runs `supabase db lint`, and runs `supabase db reset`
 - `Database Production` runs only after `Database CI` succeeds on `main`
 - the production workflow uses the GitHub `Action Production` environment with `DOTENV_PRIVATE_KEY_PRODUCTION`, `SUPABASE_ACCESS_TOKEN`, and `SUPABASE_DB_PASSWORD`
 - the production push explicitly links to the repo's committed Supabase project ref and runs `bun run supabase:db:push:production`, which applies `--include-all` so the remote schema stays aligned with the committed migration history

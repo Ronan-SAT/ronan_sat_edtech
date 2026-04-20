@@ -1,10 +1,11 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AlertCircle, ArrowDown, ArrowUp, ArrowUpDown, GripVertical, Plus, Search, X } from "lucide-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getClientCache, setClientCache } from "@/lib/clientCache";
 import {
   REVIEW_REASON_COLOR_PRESETS,
   createReviewReasonId,
@@ -24,6 +25,17 @@ const CUSTOMIZE_REASON_VALUE = "__customize_reason__";
 const UNSET_REASON_VALUE = "__unset_reason__";
 const FALLBACK_REASON_COLOR = "#F4F1EA";
 const ERROR_LOG_PAGE_SIZE = 20;
+const ERROR_LOG_CACHE_KEY_PREFIX = "review:error-log";
+
+type ErrorLogCacheState = {
+  query: string;
+  statusFilter: "all" | ReviewErrorLogStatus;
+  rows: ReviewErrorLogEntry[];
+  nextOffset: number;
+  hasMore: boolean;
+  sortColumn: SortColumn;
+  sortDirection: SortDirection;
+};
 
 type SortColumn = "timestamp" | "questionNumber" | "testTitle" | "domain" | "skill" | "difficulty" | "reason";
 type SortDirection = "asc" | "desc";
@@ -118,13 +130,15 @@ function compareErrorLogRows(left: ReviewErrorLogEntry, right: ReviewErrorLogEnt
 }
 
 export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: ReviewErrorLogProps) {
-  const [query, setQuery] = useState("");
+  const cacheKey = `${ERROR_LOG_CACHE_KEY_PREFIX}:${testType}`;
+  const cachedState = getClientCache<ErrorLogCacheState>(cacheKey);
+  const [query, setQuery] = useState(cachedState?.query ?? "");
   const deferredQuery = useDeferredValue(query);
-  const [statusFilter, setStatusFilter] = useState<"all" | ReviewErrorLogStatus>("all");
-  const [rows, setRows] = useState<ReviewErrorLogEntry[]>([]);
-  const [nextOffset, setNextOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingRows, setLoadingRows] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<"all" | ReviewErrorLogStatus>(cachedState?.statusFilter ?? "all");
+  const [rows, setRows] = useState<ReviewErrorLogEntry[]>(cachedState?.rows ?? []);
+  const [nextOffset, setNextOffset] = useState(cachedState?.nextOffset ?? 0);
+  const [hasMore, setHasMore] = useState(cachedState?.hasMore ?? false);
+  const [loadingRows, setLoadingRows] = useState(!cachedState);
   const [loadingMoreRows, setLoadingMoreRows] = useState(false);
   const [pendingReasonKey, setPendingReasonKey] = useState<string | null>(null);
   const [reasonCatalog, setReasonCatalog] = useState<ReviewReasonItem[]>([]);
@@ -134,10 +148,11 @@ export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: Rev
   const [savingReasonCatalog, setSavingReasonCatalog] = useState(false);
   const [draftReasonCatalog, setDraftReasonCatalog] = useState<ReviewReasonItem[]>([]);
   const [draftSelectedReasonId, setDraftSelectedReasonId] = useState<string | null>(null);
-  const [sortColumn, setSortColumn] = useState<SortColumn>("timestamp");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [sortColumn, setSortColumn] = useState<SortColumn>(cachedState?.sortColumn ?? "timestamp");
+  const [sortDirection, setSortDirection] = useState<SortDirection>(cachedState?.sortDirection ?? "desc");
   const [, startUiTransition] = useTransition();
   const selectedReason = draftSelectedReasonId ? draftReasonCatalog.find((item) => item.id === draftSelectedReasonId) ?? null : null;
+  const hasHydratedCachedPageRef = useRef(Boolean(cachedState));
 
   const sortedRows = useMemo(() => {
     const direction = sortDirection === "asc" ? 1 : -1;
@@ -154,6 +169,18 @@ export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: Rev
       })
       .map(({ row }) => row);
   }, [rows, sortColumn, sortDirection]);
+
+  useEffect(() => {
+    setClientCache<ErrorLogCacheState>(cacheKey, {
+      query,
+      statusFilter,
+      rows,
+      nextOffset,
+      hasMore,
+      sortColumn,
+      sortDirection,
+    });
+  }, [cacheKey, hasMore, nextOffset, query, rows, sortColumn, sortDirection, statusFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -183,6 +210,12 @@ export function ReviewErrorLog({ testType, onViewQuestion, onUpdateReason }: Rev
     let cancelled = false;
 
     const loadInitialPage = async () => {
+      if (hasHydratedCachedPageRef.current) {
+        hasHydratedCachedPageRef.current = false;
+        setLoadingRows(false);
+        return;
+      }
+
       setLoadingRows(true);
 
       try {
