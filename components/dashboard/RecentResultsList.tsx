@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { isVerbalSection } from "@/lib/sections";
 import type { DashboardRecentResult } from "@/types/dashboard";
 
 type RecentResultsListProps = {
@@ -16,10 +17,12 @@ function getDisplayDate(result: DashboardRecentResult) {
 
 function getDisplayScore(result: DashboardRecentResult) {
   if (result.isSectional) {
-    return result.score || result.totalScore || 0;
+    const score = result.score || result.totalScore || 0;
+    const denominator = isVerbalSection(result.sectionalSubject) ? 27 : 22;
+    return `${score}/${denominator}`;
   }
 
-  return Math.max(400, result.totalScore || result.score || 0);
+  return `${Math.max(400, result.totalScore || result.score || 0)}/1600`;
 }
 
 export default function RecentResultsList({ results }: RecentResultsListProps) {
