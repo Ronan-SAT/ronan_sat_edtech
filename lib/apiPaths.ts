@@ -18,6 +18,7 @@ export const API_PATHS = {
   GROUPS: "/api/groups",
   RESULT_REASON: "/api/results/reason",
   RESULT_ERROR_LOG: "/api/results/error-log",
+  TEST_ACCESS: "/api/test-access",
   TESTS: "/api/tests",
   STUDENTS: "/api/students",
   ADMIN_ROLES: "/api/admin/roles",

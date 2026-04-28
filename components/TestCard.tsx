@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { RotateCcw } from "lucide-react";
 
 import DownloadPdfButton from "@/components/DownloadPdfButton";
+import { TestAccessButton } from "@/components/test-access/TestAccessButton";
 import { isVerbalSection, VERBAL_SECTION } from "@/lib/sections";
 import type { TestListItem, UserResultSummary } from "@/types/testLibrary";
 
@@ -19,6 +22,9 @@ type ModuleActionProps = {
   scoreDenominator: number;
   startHref: string;
   reviewHref?: string;
+  testId: string;
+  testTitle: string;
+  requiresToken?: boolean;
 };
 
 function getResultTestId(result: UserResultSummary) {
@@ -177,6 +183,9 @@ export default function TestCard({
               scoreDenominator={moduleFilter === "reading" ? 27 : 22}
               startHref={`/test/${test._id}?section=${formattedSectionName}&module=1&mode=sectional`}
               reviewHref={mod1Result?._id ? `/review?mode=sectional&resultId=${mod1Result._id}` : undefined}
+              testId={test._id}
+              testTitle={test.title}
+              requiresToken={test.requiresToken}
             />
             <ModuleAction
               title="Module 2"
@@ -185,6 +194,9 @@ export default function TestCard({
               scoreDenominator={moduleFilter === "reading" ? 27 : 22}
               startHref={`/test/${test._id}?section=${formattedSectionName}&module=2&mode=sectional`}
               reviewHref={mod2Result?._id ? `/review?mode=sectional&resultId=${mod2Result._id}` : undefined}
+              testId={test._id}
+              testTitle={test.title}
+              requiresToken={test.requiresToken}
             />
 
             <DownloadPdfButton
@@ -203,13 +215,17 @@ export default function TestCard({
               >
                 {getFullLengthScore(latestFullLengthResult)} / 1600
               </Link>
-              <Link
+              <TestAccessButton
                 href={`/test/${test._id}?mode=full`}
+                testId={test._id}
+                testTitle={test.title}
+                requiresToken={test.requiresToken}
+                lockedLabel="Token"
                 className="workbook-button workbook-button-secondary justify-center px-0"
-                aria-label="Retake full-length test"
+                ariaLabel="Retake full-length test"
               >
                 <RotateCcw className="h-4 w-4" />
-              </Link>
+              </TestAccessButton>
             </div>
             <DownloadPdfButton
               testId={test._id}
@@ -219,9 +235,15 @@ export default function TestCard({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
-            <Link href={`/test/${test._id}?mode=full`} className="workbook-button w-full justify-center">
+            <TestAccessButton
+              href={`/test/${test._id}?mode=full`}
+              testId={test._id}
+              testTitle={test.title}
+              requiresToken={test.requiresToken}
+              className="workbook-button w-full justify-center"
+            >
               Start Practice
-            </Link>
+            </TestAccessButton>
             <DownloadPdfButton
               testId={test._id}
               testName={test.title}
@@ -256,6 +278,9 @@ function ModuleAction({
   scoreDenominator,
   startHref,
   reviewHref,
+  testId,
+  testTitle,
+  requiresToken = false,
 }: ModuleActionProps) {
   return (
     <section className="rounded-2xl border-2 border-ink-fg bg-surface-white p-3.5 brutal-shadow-sm">
@@ -276,14 +301,28 @@ function ModuleAction({
           <Link href={reviewHref} className="workbook-button workbook-button-secondary justify-center">
             {getSectionalScore(result)} / {scoreDenominator}
           </Link>
-          <Link href={startHref} className="workbook-button workbook-button-secondary justify-center px-0" aria-label={`Retake ${title.toLowerCase()}`}>
+          <TestAccessButton
+            href={startHref}
+            testId={testId}
+            testTitle={testTitle}
+            requiresToken={requiresToken}
+            lockedLabel="Token"
+            className="workbook-button workbook-button-secondary justify-center px-0"
+            ariaLabel={`Retake ${title.toLowerCase()}`}
+          >
             <RotateCcw className="h-4 w-4" />
-          </Link>
+          </TestAccessButton>
         </div>
       ) : (
-        <Link href={startHref} className="workbook-button w-full justify-center">
+        <TestAccessButton
+          href={startHref}
+          testId={testId}
+          testTitle={testTitle}
+          requiresToken={requiresToken}
+          className="workbook-button w-full justify-center"
+        >
           Start {title}
-        </Link>
+        </TestAccessButton>
       )}
     </section>
   );
